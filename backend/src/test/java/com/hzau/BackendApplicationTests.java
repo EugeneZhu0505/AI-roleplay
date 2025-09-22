@@ -1,4 +1,4 @@
-package com.hzau.backend;
+package com.hzau;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

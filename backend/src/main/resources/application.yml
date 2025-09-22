@@ -1,0 +1,156 @@
+spring:
+  profiles:
+    active: dev
+  application:
+    name: ai-roleplay
+  
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ai_roleplay}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:12345678}
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+  
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+# 七牛云AI配置
+qiniu:
+  ai:
+    # 请在此处填入您的API密钥
+    api-key: sk-1649a402ca3c7e9a8dd14158ae45fe8d33d9f5a37380ad2afc0809175846f603
+    # 可选配置
+    default-model: deepseek-v3
+    timeout: 30
+    max-retries: 3
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
+  # WebSocket配置
+  websocket:
+    allowed-origins: "*"
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.hzau.entity
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:YWktcm9sZXBsYXktc3VwZXItc2VjcmV0LWp3dC1rZXktMjAyNC0xNzU4NTQ0NjUxCg==}
+  expiration: 86400000  # 24小时
+  refresh-expiration: 604800000  # 7天
+
+# LLM API配置
+llm:
+  providers:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      model: ${OPENAI_MODEL:gpt-3.5-turbo}
+      max-tokens: 1000
+      temperature: 0.7
+    qianwen:
+      api-key: ${QIANWEN_API_KEY:}
+      base-url: ${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
+      model: ${QIANWEN_MODEL:qwen-turbo}
+  default-provider: openai
+
+# 语音服务配置
+voice:
+  speech-recognition:
+    provider: baidu
+    baidu:
+      app-id: ${BAIDU_ASR_APP_ID:}
+      api-key: ${BAIDU_ASR_API_KEY:}
+      secret-key: ${BAIDU_ASR_SECRET_KEY:}
+  text-to-speech:
+    provider: baidu
+    baidu:
+      app-id: ${BAIDU_TTS_APP_ID:}
+      api-key: ${BAIDU_TTS_API_KEY:}
+      secret-key: ${BAIDU_TTS_SECRET_KEY:}
+
+# MinIO对象存储配置
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-name: ${MINIO_BUCKET:ai-roleplay}
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# 日志配置
+logging:
+  level:
+    com.hzau: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+  file:
+    name: logs/ai-roleplay.log
+    max-size: 100MB
+    max-history: 30
+    total-size-cap: 1GB
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# 应用信息
+info:
+  app:
+    name: AI角色扮演网站
+    description: 基于AI的角色扮演聊天平台
+    version: 1.0.0
