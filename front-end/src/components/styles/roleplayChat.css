@@ -1,0 +1,112 @@
+.roleplay-page-container{
+  display: flex;
+  width: 100%;
+  min-height: 890px;
+  max-height:100%;
+  padding: 20px;
+}
+
+.roleplay-chat-container{
+    width: 60%;
+    min-height: 890px;
+    max-height: 100%;
+    margin-left :300px;
+    overflow: hidden;
+    align-self: flex-start;
+}
+
+.roleplay-chat-header{
+    color: rgb(24, 24, 24);
+    padding: 16px;
+    text-align: center;
+}
+
+.roleplay-chat-messages{
+    height: 700px;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.message {
+    max-width: 100%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    position: relative;
+}
+
+.ai-message{
+  align-self: flex-start;
+}
+
+.user-message {
+  align-self: flex-end;
+}
+
+.message-sender {
+  font-size: 12px;
+  margin-bottom: 4px;
+  opacity: 0.8;
+}
+
+.message-content {
+  background-color: #babdc3;
+  margin-bottom: 16px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: 18px;
+}
+
+.roleplay-chat-input {
+  display: flex;
+  padding: 16px;
+  background-color: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.message-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 24px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.message-input:focus {
+  border-color: #4b4f54;
+}
+
+.send-button {
+  margin-left: 12px;
+  padding: 12px 24px;
+  background-color: #24272a;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.send-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.roleplay-setting-body{
+  width: 300px;
+  min-height: 890px;
+  max-height:100%;
+  overflow: hidden;
+  align-self: flex-end;
+  align-items: center;
+  text-align: center;
+}

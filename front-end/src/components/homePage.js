@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles/homePageStyles.css';
+import TomCatModel from './foxModel';
 
 function HomePage() {
     // 移动端侧边栏控制状态
@@ -24,6 +25,10 @@ function HomePage() {
         toggleSidebar(); // 先关闭侧边栏
         navigate('/'); // 跳转到登录页面
     };
+
+    const handleQuickStart = () => {
+        navigate('/roleplay');
+    }
     
     return (
         <div className="home-page">
@@ -99,7 +104,7 @@ function HomePage() {
                     <div className="card">
                         <h3>快速开始</h3>
                         <p>选择一个AI角色开始对话，体验智能角色扮演的乐趣。</p>
-                        <button className="card-button">开始对话</button>
+                        <button className="card-button" onClick={handleQuickStart}>开始对话</button>
                     </div>
                     <div className="card">
                         <h3>热门角色</h3>
@@ -112,7 +117,9 @@ function HomePage() {
                         <button className="card-button">查看历史</button>
                     </div>
                 </div>
+                <TomCatModel />
             </main>
+
         </div>
     )
 }
