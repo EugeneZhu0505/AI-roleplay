@@ -11,16 +11,16 @@ import java.util.List;
 /**
  * @projectName: AI-roleplay
  * @package: com.hzau.dto
- * @className: ChatReq
+ * @className: LlmChatReq
  * @author: zhuyuchen
  * @description: TODO
- * @date: 2025/9/22 下午9:04
+ * @date: 2025/9/23 上午10:23
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatReq {
+public class LlmChatReq {
 
     /**
      * 模型名称
@@ -30,7 +30,7 @@ public class ChatReq {
     /**
      * 消息列表
      */
-    private List<ChatMessage> messages;
+    private List<MessageContent> messages;
 
     /**
      * 是否流式输出

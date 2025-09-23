@@ -2,15 +2,17 @@ package com.hzau.controller;
 
 import com.hzau.common.Result;
 import com.hzau.common.constants.ErrorCode;
-import com.hzau.dto.ChatMessage;
+import com.hzau.dto.MessageContent;
+import com.hzau.dto.UserChatReq;
 import com.hzau.service.QiniuAiService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -18,7 +20,7 @@ import java.util.Map;
 
 /**
  * @projectName: AI-roleplay
- * @package: com.hzau.controller
+ * @package: com.hzau.controller 
  * @className: AiChatController
  * @author: zhuyuchen
  * @description: TODO
@@ -53,9 +55,9 @@ public class AiChatController {
     @Operation(summary = "单次对话", description = "发送单条消息给AI并获取回复")
     public Mono<Result<String>> singleChat(
             @Parameter(description = "用户消息", required = true)
-            @RequestBody Map<String, String> request) {
+            @org.springframework.web.bind.annotation.RequestBody UserChatReq request) {
 
-        String message = request.get("message");
+        String message = request.getMessage();
         if (message == null || message.trim().isEmpty()) {
             return Mono.just(Result.fail(ErrorCode.ERROR400.getCode(), "消息内容不能为空"));
         }
@@ -83,9 +85,9 @@ public class AiChatController {
             @Parameter(description = "会话ID", required = true)
             @PathVariable String conversationId,
             @Parameter(description = "用户消息", required = true)
-            @RequestBody Map<String, String> request) {
+            @org.springframework.web.bind.annotation.RequestBody UserChatReq request) {
 
-        String message = request.get("message");
+        String message = request.getMessage();
         if (message == null || message.trim().isEmpty()) {
             return Mono.just(Result.fail(ErrorCode.ERROR400.getCode(), "消息内容不能为空"));
         }
@@ -109,11 +111,11 @@ public class AiChatController {
      */
     @GetMapping("/chat/history/{conversationId}")
     @Operation(summary = "获取会话历史", description = "获取指定会话的消息历史")
-    public Result<List<ChatMessage>> getConversationHistory(
+    public Result<List<MessageContent>> getConversationHistory(
             @Parameter(description = "会话ID", required = true)
             @PathVariable String conversationId) {
 
-        List<ChatMessage> history = qiniuAiService.getConversationHistory(conversationId);
+        List<MessageContent> history = qiniuAiService.getConversationHistory(conversationId);
         return Result.success(history);
     }
 
@@ -128,6 +130,66 @@ public class AiChatController {
 
         qiniuAiService.clearConversation(conversationId);
         return Result.success("会话历史已清除");
+    }
+
+    /**
+     * 流式单次对话
+     */
+    @PostMapping(value = "/chat/single/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "流式单次对话", description = "发送单条消息给AI并获取流式回复")
+    public Flux<String> singleChatStream(
+            @Parameter(description = "用户消息", required = true)
+            @org.springframework.web.bind.annotation.RequestBody UserChatReq request) {
+
+        String message = request.getMessage();
+        if (message == null || message.trim().isEmpty()) {
+            return Flux.just("data: " + "{\"error\":\"消息内容不能为空\"}\n\n");
+        }
+
+        if (!qiniuAiService.isConfigValid()) {
+            return Flux.just("data: " + "{\"error\":\"AI服务未正确配置，请检查API密钥\"}\n\n");
+        }
+
+        log.info("流式单次对话请求: {}", message);
+
+        return qiniuAiService.singleChatStream(message.trim())
+                .map(chunk -> "data: " + chunk + "\n\n")
+                .concatWith(Flux.just("data: [DONE]\n\n"))
+                .onErrorResume(error -> {
+                    log.error("流式对话失败", error);
+                    return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
+                });
+    }
+
+    /**
+     * 流式多轮对话
+     */
+    @PostMapping(value = "/chat/multi/{conversationId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "流式多轮对话", description = "在指定会话中发送消息并获取流式回复")
+    public Flux<String> multiTurnChatStream(
+            @Parameter(description = "会话ID", required = true)
+            @PathVariable String conversationId,
+            @Parameter(description = "用户消息", required = true)
+            @org.springframework.web.bind.annotation.RequestBody UserChatReq request) {
+
+        String message = request.getMessage();
+        if (message == null || message.trim().isEmpty()) {
+            return Flux.just("data: " + "{\"error\":\"消息内容不能为空\"}\n\n");
+        }
+
+        if (!qiniuAiService.isConfigValid()) {
+            return Flux.just("data: " + "{\"error\":\"AI服务未正确配置，请检查API密钥\"}\n\n");
+        }
+
+        log.info("流式多轮对话请求 [{}]: {}", conversationId, message);
+
+        return qiniuAiService.multiTurnChatStream(conversationId, message.trim())
+                .map(chunk -> "data: " + chunk + "\n\n")
+                .concatWith(Flux.just("data: [DONE]\n\n"))
+                .onErrorResume(error -> {
+                    log.error("流式多轮对话失败", error);
+                    return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
+                });
     }
 
     /**

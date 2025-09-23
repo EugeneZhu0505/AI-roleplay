@@ -8,13 +8,13 @@ import java.util.List;
 /**
  * @projectName: AI-roleplay
  * @package: com.hzau.dto
- * @className: ChatRes
+ * @className: LlmChatRes
  * @author: zhuyuchen
  * @description: TODO
- * @date: 2025/9/22 下午9:05
+ * @date: 2025/9/23 上午10:25
  */
 @Data
-public class ChatRes {
+public class LlmChatRes {
 
     /**
      * 响应ID
@@ -59,7 +59,7 @@ public class ChatRes {
         /**
          * 消息
          */
-        private ChatMessage message;
+        private MessageContent message;
 
         /**
          * 完成原因

@@ -70,7 +70,18 @@ public class JwtUtils {
      */
     public Long getUserIdFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
-        return (Long) claims.get("userId");
+        Object userIdObj = claims.get("userId");
+        
+        if (userIdObj == null) {
+            throw new RuntimeException("UserId not found in token");
+        }
+        
+        // 更安全的类型转换
+        if (userIdObj instanceof Number) {
+            return ((Number) userIdObj).longValue();
+        } else {
+            throw new RuntimeException("Invalid userId type in token: " + userIdObj.getClass());
+        }
     }
 
     /**

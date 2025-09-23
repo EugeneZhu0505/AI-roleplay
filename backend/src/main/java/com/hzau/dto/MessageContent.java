@@ -7,15 +7,15 @@ import lombok.NoArgsConstructor;
 /**
  * @projectName: AI-roleplay
  * @package: com.hzau.dto
- * @className: ChatMessage
+ * @className: MessageContent
  * @author: zhuyuchen
  * @description: TODO
- * @date: 2025/9/22 下午9:04
+ * @date: 2025/9/23 上午10:21
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatMessage {
+public class MessageContent {
 
     /**
      * 消息角色：system, user, assistant
@@ -30,21 +30,21 @@ public class ChatMessage {
     /**
      * 创建用户消息
      */
-    public static ChatMessage user(String content) {
-        return new ChatMessage("user", content);
+    public static MessageContent user(String content) {
+        return new MessageContent("user", content);
     }
 
     /**
      * 创建助手消息
      */
-    public static ChatMessage assistant(String content) {
-        return new ChatMessage("assistant", content);
+    public static MessageContent assistant(String content) {
+        return new MessageContent("assistant", content);
     }
 
     /**
      * 创建系统消息
      */
-    public static ChatMessage system(String content) {
-        return new ChatMessage("system", content);
+    public static MessageContent system(String content) {
+        return new MessageContent("system", content);
     }
 }
