@@ -2,6 +2,7 @@ import './App.css';
 import { Route, Routes } from 'react-router-dom';
 import LoginPage from './components/loginPage';
 import HomePage from './components/homePage';
+import RoleplayChat from './components/roleplayChat';
 
 function App() {
   return (
@@ -12,6 +13,9 @@ function App() {
         
         {/* 主页路由 */}
         <Route path="/home" element={<HomePage />} />
+
+        {/* 角色对话页面路由 */}
+        <Route path="/roleplay" element={<RoleplayChat />} />
       </Routes>
     </div>
   );
