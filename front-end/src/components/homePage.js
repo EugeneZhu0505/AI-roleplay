@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles/homePageStyles.css';
-import TomCatModel from './foxModel';
+import RoleplayList from './roleplayList';
+import RoleplayChat from './roleplayChat';
+
 
 function HomePage() {
     // 移动端侧边栏控制状态
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [username, setUsername] = useState(localStorage.getItem('username') || '');
+    const [image, setImage] = useState(localStorage.getItem('image') || '');
+
     const navigate = useNavigate();
     
     // 切换侧边栏显示/隐藏
@@ -26,8 +31,8 @@ function HomePage() {
         navigate('/'); // 跳转到登录页面
     };
 
-    const handleQuickStart = () => {
-        navigate('/roleplay');
+    const handleRoleplayCardClick = (roleplayDetailedInformation) => {
+        // navigate('/roleplay', { state: { roleplayId } });
     }
     
     return (
@@ -95,29 +100,7 @@ function HomePage() {
 
             {/* 主内容区域 */}
             <main className={`main-content ${sidebarOpen ? 'open' : ''}`}>
-                <div className="main-header">
-                    <h1>欢迎来到 Roleplay.AI</h1>
-                </div>
-                
-                {/* 内容卡片 */}
-                <div className="content-cards">
-                    <div className="card">
-                        <h3>快速开始</h3>
-                        <p>选择一个AI角色开始对话，体验智能角色扮演的乐趣。</p>
-                        <button className="card-button" onClick={handleQuickStart}>开始对话</button>
-                    </div>
-                    <div className="card">
-                        <h3>热门角色</h3>
-                        <p>查看当前最受欢迎的AI角色，发现新的对话伙伴。</p>
-                        <button className="card-button">浏览角色</button>
-                    </div>
-                    <div className="card">
-                        <h3>最近对话</h3>
-                        <p>继续之前的对话，保持连贯的交流体验。</p>
-                        <button className="card-button">查看历史</button>
-                    </div>
-                </div>
-                <TomCatModel />
+                <RoleplayList username={username} image={image} />
             </main>
 
         </div>

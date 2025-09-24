@@ -1,0 +1,46 @@
+.roleplayCardItem-slide-container{
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.roleplayCardItem-slide{
+    display: flex;
+    transition: transform 0.3s ease;
+}
+
+.nextButton-container{
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.nextButton{
+    width: 30px;
+    height: 30px;
+}
+
+.prevButton-container{
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.prevButton{
+    width: 30px;
+    height: 30px;
+}
+
+.prevButton.disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+    display: none;
+}
+
+.nextButton.disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+    display: none;
+}

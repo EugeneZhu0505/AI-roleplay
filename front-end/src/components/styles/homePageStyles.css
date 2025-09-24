@@ -10,8 +10,8 @@
 /* 左侧边栏样式 */
 .sidebar {
   width: 300px;
-  background-color: #2c3e50;
-  color: white;
+  background-color: white;
+  color: rgb(100, 99, 99);
   padding: 20px 0;
   position: fixed;
   height: 100vh;
@@ -23,8 +23,10 @@
 /* 侧边栏头部样式 */
 .sidebar-header {
   padding: 0 20px 20px;
-  border-bottom: 1px solid #34495e;
-  
+  border-bottom: 1px solid #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .sidebar-header h2 {
@@ -32,13 +34,15 @@
   font-size: 1.5rem;
   font-weight: 600;
   transition: transform 0.3s ease;
+  margin-right:20px
 }
 
 /* 侧边栏关闭按钮样式 */
 .close-button {
   background: none;
   border: none;
-  color: white;
+  color: rgb(23, 23, 23);
+  background-color: #d3d3d3;
   font-size: 1.5rem;
   cursor: pointer;
   padding: 5px;
@@ -54,7 +58,7 @@
 }
 
 .close-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(72, 71, 71, 0.1);
 }
 
 /* 侧边栏导航样式 */
@@ -72,19 +76,19 @@
   display: flex;
   align-items: center;
   padding: 12px 20px;
-  color: #ecf0f1;
+  color: #000000;
   text-decoration: none;
   transition: all 0.3s ease;
   font-size: 1rem;
 }
 
 .sidebar-nav a:hover {
-  background-color: #34495e;
+  background-color: #a7a9aa;
   padding-left: 25px;
 }
 
 .sidebar-nav a.active {
-  background-color: #3498db;
+  background-color: #a7a9aa;
   font-weight: 500;
 }
 
@@ -117,7 +121,7 @@
 
 .main-header h1 {
   margin: 0;
-  color: #2c3e50;
+  color: #707070;
   font-size: 2rem;
 }
 
@@ -153,7 +157,7 @@
 }
 
 .card-button {
-  background-color: #3498db;
+  background-color: #585959;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -164,7 +168,7 @@
 }
 
 .card-button:hover {
-  background-color: #2980b9;
+  background-color: #8b8c8c;
 }
 
 /* 响应式设计 */
@@ -190,8 +194,8 @@
     top: 20px;
     left: 20px;
     z-index: 2000;
-    background-color: #2c3e50;
-    color: white;
+    background-color: #d3d3d3;
+    color: rgb(12, 12, 12);
     border: none;
     padding: 10px;
     border-radius: 4px;

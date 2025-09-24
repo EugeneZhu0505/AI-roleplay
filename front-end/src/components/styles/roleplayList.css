@@ -1,0 +1,134 @@
+
+.roleplayList-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-left:20px;
+}
+
+
+.roleplayList-header{
+    width: 85%;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 50px;
+    margin-top:20px
+}
+
+.roleplayList-header-welcome-comtainer{
+    display: flex;
+    flex-direction: column;
+}
+
+.roleplayList-header-welcome{
+    font-size: 1rem;
+    color: #818284;
+    margin-bottom: 10px
+}
+
+.roleplayList-header-user{
+    display: flex;
+    align-items: center;
+    margin-left:10px;
+}
+
+.roleplayList-header-user-img{
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+}
+
+.roleplayList-header-user-name{
+    font-size: 22px;
+    color: #080808;
+}
+
+.roleplayList-header-search-container{
+    width: 350px;
+    height: 45px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    background-color: #e2e2e3;
+}
+
+.roleplayList-header-search-icon{
+    width: 20px;
+    height: 20px;
+}
+
+.roleplayList-header-search{
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    font-size: 1rem;
+    margin-left: 10px;
+}
+
+.roleplayList-recommend-container{
+    height: 270px;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+}
+
+.roleplayList-recommend-header{
+    font-size: 1.1rem;
+    color: #080808;
+    margin-left: 25px;
+}
+
+.roleplayList-recommend-list-container{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.roleplayList-category-container{
+    display: flex;
+    flex-direction: column;
+    height: 270px;
+}
+
+.roleplayList-category-button-container{
+    display: flex;
+    gap: 10px;
+    margin-bottom: 5px;
+    margin-left: 30px;
+}
+
+.roleplayList-category-button{
+    font-size: 1rem;
+    color: #383737;
+    background-color: #dcdada;
+    width: 80px;
+    height: 40px;
+    border-radius: 15px;
+    outline: none;
+    border: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.roleplayList-category-button:hover{
+    color: #000000;
+    font-weight: bold;
+}
+
+.roleplayList-category-button.active{
+    color: #e4e1e1;
+    background-color: #000000;
+    font-weight: bold;
+}
+
+.roleplayList-category-list-container{
+    width: 100%;
+    height: 100%;
+}
