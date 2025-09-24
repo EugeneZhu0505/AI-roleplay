@@ -32,10 +32,14 @@ public class UserLoginRes {
     @Schema(description = "用户名", example = "testuser")
     private String username;
 
-    public UserLoginRes(String accessToken, Long userId, String username) {
+    @Schema(description = "头像", example = "http://122.205.70.147:8080/files/image/2025/09/24/993353aae463424bb3492e67e4448ee1.jpg")
+    private String avatarUrl;
+
+    public UserLoginRes(String accessToken, Long userId, String username, String avatarUrl) {
         this.accessToken = accessToken;
         this.userId = userId;
         this.username = username;
+        this.avatarUrl = avatarUrl;
     }
 }
 

@@ -3,6 +3,12 @@ spring:
     active: dev
   application:
     name: ai-roleplay
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
   
   # 数据源配置
   datasource:
@@ -52,12 +58,7 @@ qiniu:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
   
-  # 文件上传配置
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
-  
+
   # WebSocket配置
   websocket:
     allowed-origins: "*"
@@ -111,14 +112,6 @@ voice:
       app-id: ${BAIDU_TTS_APP_ID:}
       api-key: ${BAIDU_TTS_API_KEY:}
       secret-key: ${BAIDU_TTS_SECRET_KEY:}
-
-# MinIO对象存储配置
-minio:
-  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-  access-key: ${MINIO_ACCESS_KEY:minioadmin}
-  secret-key: ${MINIO_SECRET_KEY:minioadmin}
-  bucket-name: ${MINIO_BUCKET:ai-roleplay}
-
 # 服务器配置
 server:
   port: 8080
@@ -132,19 +125,35 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
   file:
     name: logs/ai-roleplay.log
-    max-size: 100MB
-    max-history: 30
-    total-size-cap: 1GB
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      total-size-cap: 1GB
+      max-history: 30
 
-# 管理端点配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
+
+# 文件上传配置
+file:
+  upload:
+    base-path: E:\Code\AI-roleplay\data
+    base-url: http://122.205.70.147
+
+
+# SpringDoc OpenAPI配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    config-url: /v3/api-docs/swagger-config
+    url: /v3/api-docs
+    disable-swagger-default-url: true
+    use-root-path: true
+  show-actuator: true
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
 
 # 应用信息
 info:

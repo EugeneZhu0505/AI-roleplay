@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
 
@@ -55,7 +55,8 @@ public class AuthController {
             UserLoginRes response = new UserLoginRes(
                     token,
                     user.getId().longValue(),
-                    user.getUsername()
+                    user.getUsername(),
+                    user.getAvatarUrl()
             );
 
             log.info("用户 {} 注册成功", user.getUsername());
@@ -96,7 +97,8 @@ public class AuthController {
             UserLoginRes response = new UserLoginRes(
                     token,
                     user.getId().longValue(),
-                    user.getUsername()
+                    user.getUsername(),
+                    user.getAvatarUrl()
             );
 
             log.info("用户 {} 登录成功", user.getUsername());

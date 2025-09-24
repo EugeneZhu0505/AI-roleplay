@@ -12,6 +12,8 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import reactor.core.publisher.Flux;
+
 /**
  * @projectName: AI-roleplay
  * @package: com.hzau.service
@@ -38,6 +40,18 @@ public class AiRoleplayService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private ConversationCacheService conversationCacheService;
+
+    @Autowired
+    private ConcurrentControlService concurrentControlService;
+
+    @Autowired
+    private QiniuAudioService qiniuVoiceService;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     private static final String OPENING_CACHE_KEY = "ai:opening:";
     private static final String CONTEXT_CACHE_KEY = "ai:context:";
@@ -85,9 +99,17 @@ public class AiRoleplayService {
         // 构建开场白生成提示
         String prompt = buildOpeningPrompt(character);
 
-        return qiniuAiService.singleChat(prompt)
-                .doOnSuccess(opening -> log.info("角色开场白生成成功, characterId: {}", characterId))
-                .doOnError(error -> log.error("角色开场白生成失败, characterId: {}", characterId, error));
+        // 获取并发控制许可
+        return concurrentControlService.acquirePermit("system", "llm")
+                .flatMap(permit -> qiniuAiService.singleChat(prompt)
+                        .doOnSuccess(opening -> {
+                            log.info("角色开场白生成成功, characterId: {}", characterId);
+                            concurrentControlService.releasePermit("system", "llm");
+                        })
+                        .doOnError(error -> {
+                            log.error("角色开场白生成失败, characterId: {}", characterId, error);
+                            concurrentControlService.releasePermit("system", "llm");
+                        }));
     }
 
     /**
@@ -171,16 +193,94 @@ public class AiRoleplayService {
         // 构建对话上下文
         return buildConversationContext(conversationId, character, userMessage)
                 .flatMap(context -> {
-                    // 调用AI API获取回复
-                    String contextKey = CONTEXT_CACHE_KEY + conversationId;
-                    return qiniuAiService.multiTurnChat(contextKey, context);
+                    // 获取并发控制许可
+                    return concurrentControlService.acquirePermit(userId.toString(), "llm")
+                            .flatMap(permit -> {
+                                // 调用AI API获取回复
+                                String contextKey = CONTEXT_CACHE_KEY + conversationId;
+                                return qiniuAiService.multiTurnChat(contextKey, context);
+                            });
                 })
                 .doOnSuccess(aiReply -> {
                     // 保存AI回复
                     messageService.saveCharacterMessage(conversationId, aiReply);
                     log.info("消息发送成功, conversationId: {}", conversationId);
+                    // 释放并发控制许可
+                    concurrentControlService.releasePermit(userId.toString(), "llm");
                 })
-                .doOnError(error -> log.error("消息发送失败, conversationId: {}", conversationId, error));
+                .doOnError(error -> {
+                    log.error("消息发送失败, conversationId: {}", conversationId, error);
+                    // 释放并发控制许可
+                    concurrentControlService.releasePermit(userId.toString(), "llm");
+                });
+    }
+
+    /**
+     * 发送消息并获取AI回复（流式输出）
+     * @param userId 用户ID
+     * @param conversationId 对话ID
+     * @param userMessage 用户消息
+     * @return AI回复流
+     */
+    public Flux<String> sendMessageStream(Integer userId, Long conversationId, String userMessage) {
+        log.info("发送消息（流式）, userId: {}, conversationId: {}, message: {}", userId, conversationId, userMessage);
+
+        // 验证对话是否属于用户
+        if (!conversationService.isConversationOwnedByUser(conversationId, userId)) {
+            return Flux.error(new RuntimeException("无权访问该对话"));
+        }
+
+        // 获取对话信息
+        Conversation conversation = conversationService.getConversationById(conversationId);
+        if (conversation == null) {
+            return Flux.error(new RuntimeException("对话不存在"));
+        }
+
+        // 获取角色信息
+        Character character = characterService.getById(conversation.getCharacterId());
+        if (character == null) {
+            return Flux.error(new RuntimeException("角色不存在"));
+        }
+
+        // 保存用户消息
+        messageService.saveUserMessage(conversationId, userMessage);
+
+        // 构建对话上下文并进行流式对话
+        return buildConversationContext(conversationId, character, userMessage)
+                .flatMapMany(context -> {
+                    // 获取并发控制许可
+                    return concurrentControlService.acquirePermit(userId.toString(), "llm")
+                            .flatMapMany(permit -> {
+                                // 调用AI API获取流式回复
+                                String contextKey = CONTEXT_CACHE_KEY + conversationId;
+                                StringBuilder responseBuilder = new StringBuilder();
+                                
+                                return qiniuAiService.multiTurnChatStream(contextKey, context)
+                                        .doOnNext(chunk -> {
+                                            // 累积响应内容
+                                            responseBuilder.append(chunk);
+                                        })
+                                        .doOnComplete(() -> {
+                                            // 流式输出完成后保存完整的AI回复
+                                            String fullResponse = responseBuilder.toString();
+                                            if (!fullResponse.trim().isEmpty()) {
+                                                messageService.saveCharacterMessage(conversationId, fullResponse);
+                                                log.info("流式消息发送成功, conversationId: {}", conversationId);
+                                            }
+                                            // 释放并发控制许可
+                                            concurrentControlService.releasePermit(userId.toString(), "llm");
+                                        })
+                                        .doOnError(error -> {
+                                            log.error("流式消息发送失败, conversationId: {}", conversationId, error);
+                                            // 释放并发控制许可
+                                            concurrentControlService.releasePermit(userId.toString(), "llm");
+                                        });
+                            });
+                })
+                .onErrorResume(error -> {
+                    log.error("流式消息处理失败, conversationId: {}", conversationId, error);
+                    return Flux.error(error);
+                });
     }
 
     /**
@@ -231,6 +331,117 @@ public class AiRoleplayService {
      * @param conversationId 对话ID
      * @return 消息列表
      */
+    /**
+     * 发送语音消息并获取AI回复
+     * @param userId 用户ID
+     * @param conversationId 对话ID
+     * @param audioUrl 语音文件URL
+     * @param audioFormat 音频格式
+     * @return AI回复（包含文本和语音URL）
+     */
+    public Mono<VoiceChatResponse> sendVoiceMessage(Integer userId, Long conversationId, String audioUrl, String audioFormat) {
+        log.info("发送语音消息, userId: {}, conversationId: {}, audioUrl: {}, audioFormat: {}", userId, conversationId, audioUrl, audioFormat);
+
+        // 验证对话是否属于用户
+        if (!conversationService.isConversationOwnedByUser(conversationId, userId)) {
+            return Mono.error(new RuntimeException("无权访问该对话"));
+        }
+
+        // 获取对话信息
+        Conversation conversation = conversationService.getConversationById(conversationId);
+        if (conversation == null) {
+            return Mono.error(new RuntimeException("对话不存在"));
+        }
+
+        // 获取角色信息
+        Character character = characterService.getById(conversation.getCharacterId());
+        if (character == null) {
+            return Mono.error(new RuntimeException("角色不存在"));
+        }
+
+        // 获取并发控制许可
+        return concurrentControlService.acquirePermit(userId.toString(), "llm")
+                .flatMap(permit -> {
+                    // 1. 语音转文本
+                    return qiniuVoiceService.speechToText(audioUrl, audioFormat)
+                            .flatMap(asrText -> {
+                                log.info("语音转文本成功: {}", asrText);
+
+                                // 2. 保存用户消息（包含文本和语音URL）
+                                messageService.saveUserVoiceMessage(conversationId, asrText, audioUrl, null);
+
+                                // 3. 构建对话上下文并获取AI回复
+                                return buildConversationContext(conversationId, character, asrText)
+                                        .flatMap(context -> {
+                                            String contextKey = CONTEXT_CACHE_KEY + conversationId;
+                                            return qiniuAiService.multiTurnChat(contextKey, context);
+                                        })
+                                        .flatMap(aiReplyText -> {
+                                            log.info("AI回复文本: {}", aiReplyText);
+
+                                            // 4. 文本转语音
+                                            return qiniuVoiceService.textToSpeech(aiReplyText)
+                                                    .flatMap(ttsBase64Data -> {
+                                                        try {
+                                                            // 5. 保存语音文件
+                                                            String audioFileUrl = fileStorageService.saveBase64AudioFile(
+                                                                    ttsBase64Data, "mp3");
+                                                            
+                                                            // 6. 保存AI回复消息（包含文本和语音URL）
+                                                            messageService.saveCharacterVoiceMessage(conversationId, 
+                                                                    aiReplyText, audioFileUrl, null);
+
+                                                            // 7. 返回响应
+                                                            return Mono.just(new VoiceChatResponse(
+                                                                    asrText, aiReplyText, audioFileUrl));
+
+                                                        } catch (Exception e) {
+                                                            log.error("保存语音文件失败", e);
+                                                            return Mono.error(new RuntimeException("保存语音文件失败", e));
+                                                        }
+                                                    });
+                                        });
+                            });
+                })
+                .doOnSuccess(response -> {
+                    log.info("语音消息处理成功, conversationId: {}", conversationId);
+                    // 释放并发控制许可
+                    concurrentControlService.releasePermit(userId.toString(), "llm");
+                })
+                .doOnError(error -> {
+                    log.error("语音消息处理失败, conversationId: {}", conversationId, error);
+                    // 释放并发控制许可
+                    concurrentControlService.releasePermit(userId.toString(), "llm");
+                });
+    }
+
+    /**
+     * 语音聊天响应类
+     */
+    public static class VoiceChatResponse {
+        private final String userText;
+        private final String aiText;
+        private final String aiAudioUrl;
+
+        public VoiceChatResponse(String userText, String aiText, String aiAudioUrl) {
+            this.userText = userText;
+            this.aiText = aiText;
+            this.aiAudioUrl = aiAudioUrl;
+        }
+
+        public String getUserText() {
+            return userText;
+        }
+
+        public String getAiText() {
+            return aiText;
+        }
+
+        public String getAiAudioUrl() {
+            return aiAudioUrl;
+        }
+    }
+
     public List<Message> getConversationHistory(Integer userId, Long conversationId) {
         log.info("获取对话历史, userId: {}, conversationId: {}", userId, conversationId);
 
@@ -239,6 +450,15 @@ public class AiRoleplayService {
             throw new RuntimeException("无权访问该对话");
         }
 
+        // 先尝试从缓存获取
+        List<Message> cachedMessages = conversationCacheService.getCachedMessages(conversationId);
+        if (cachedMessages != null) {
+            log.info("从缓存获取对话历史, conversationId: {}, 消息数量: {}", conversationId, cachedMessages.size());
+            return cachedMessages;
+        }
+
+        // 缓存未命中，从数据库获取
+        log.info("从数据库获取对话历史, conversationId: {}", conversationId);
         return messageService.getConversationMessages(conversationId);
     }
 

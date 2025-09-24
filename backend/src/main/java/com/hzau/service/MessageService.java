@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hzau.entity.Message;
 import com.hzau.mapper.MessageMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +21,9 @@ import java.util.List;
 @Slf4j
 @Service
 public class MessageService extends ServiceImpl<MessageMapper, Message> {
+
+    @Autowired
+    private ConversationCacheService conversationCacheService;
 
     /**
      * 保存用户消息
@@ -37,6 +41,10 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
         message.setTextContent(textContent);
 
         this.save(message);
+        
+        // 更新缓存
+        conversationCacheService.addMessageToCache(conversationId, message);
+        
         log.info("用户消息保存成功, messageId: {}", message.getId());
         return message;
     }
@@ -57,6 +65,10 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
         message.setTextContent(textContent);
 
         this.save(message);
+        
+        // 更新缓存
+        conversationCacheService.addMessageToCache(conversationId, message);
+        
         log.info("角色消息保存成功, messageId: {}", message.getId());
         return message;
     }
@@ -85,6 +97,64 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
 
         this.save(message);
         log.info("音频消息保存成功, messageId: {}", message.getId());
+        return message;
+    }
+
+    /**
+     * 保存用户语音消息
+     * @param conversationId 对话ID
+     * @param textContent 转录的文本内容
+     * @param audioUrl 音频URL
+     * @param audioDuration 音频时长
+     * @return 保存的消息
+     */
+    public Message saveUserVoiceMessage(Long conversationId, String textContent, String audioUrl, Integer audioDuration) {
+        log.info("保存用户语音消息, conversationId: {}, textContent: {}, audioUrl: {}", 
+                conversationId, textContent, audioUrl);
+
+        Message message = new Message();
+        message.setConversationId(conversationId);
+        message.setSenderType("user");
+        message.setContentType("voice");
+        message.setTextContent(textContent);
+        message.setAudioUrl(audioUrl);
+        message.setAudioDuration(audioDuration);
+
+        this.save(message);
+        
+        // 更新缓存
+        conversationCacheService.addMessageToCache(conversationId, message);
+        
+        log.info("用户语音消息保存成功, messageId: {}", message.getId());
+        return message;
+    }
+
+    /**
+     * 保存角色语音消息
+     * @param conversationId 对话ID
+     * @param textContent 文本内容
+     * @param audioUrl 音频URL
+     * @param audioDuration 音频时长
+     * @return 保存的消息
+     */
+    public Message saveCharacterVoiceMessage(Long conversationId, String textContent, String audioUrl, Integer audioDuration) {
+        log.info("保存角色语音消息, conversationId: {}, textContent: {}, audioUrl: {}", 
+                conversationId, textContent, audioUrl);
+
+        Message message = new Message();
+        message.setConversationId(conversationId);
+        message.setSenderType("character");
+        message.setContentType("voice");
+        message.setTextContent(textContent);
+        message.setAudioUrl(audioUrl);
+        message.setAudioDuration(audioDuration);
+
+        this.save(message);
+        
+        // 更新缓存
+        conversationCacheService.addMessageToCache(conversationId, message);
+        
+        log.info("角色语音消息保存成功, messageId: {}", message.getId());
         return message;
     }
 

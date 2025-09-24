@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -24,6 +25,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+// 暂时注释掉@ControllerAdvice，避免影响Swagger UI
+// @ControllerAdvice
 public class GlobalExceptionHandler {
 
     /**

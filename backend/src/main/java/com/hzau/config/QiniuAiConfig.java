@@ -46,5 +46,51 @@ public class QiniuAiConfig {
      * 最大重试次数
      */
     private int maxRetries = 3;
+
+    /**
+     * ASR语音识别配置
+     */
+    private AsrConfig asr = new AsrConfig();
+
+    /**
+     * TTS语音合成配置
+     */
+    private TtsConfig tts = new TtsConfig();
+
+    @Data
+    public static class AsrConfig {
+        /**
+         * ASR模型名称
+         */
+        private String model = "asr";
+
+        /**
+         * 支持的音频格式
+         */
+        private String[] supportedFormats = {"mp3", "wav", "ogg", "raw"};
+    }
+
+    @Data
+    public static class TtsConfig {
+        /**
+         * 默认音色类型
+         */
+        private String defaultVoiceType = "qiniu_zh_female_wwxkjx";
+
+        /**
+         * 默认音频编码
+         */
+        private String defaultEncoding = "mp3";
+
+        /**
+         * 默认语速
+         */
+        private float defaultSpeedRatio = 1.0f;
+
+        /**
+         * 最大文本长度
+         */
+        private int maxTextLength = 1000;
+    }
 }
 

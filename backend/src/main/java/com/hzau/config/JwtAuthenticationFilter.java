@@ -101,12 +101,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      */
     private boolean isPublicPath(String requestURI) {
         String[] publicPaths = {
-            "/auth/login", 
-            "/auth/register", 
+            "/api/auth/login",
+            "/api/auth/register",
             "/swagger-ui", 
             "/v3/api-docs",
             "/actuator",
-            "/error"
+            "/error",
+            "/files/"  // 添加文件访问路径，允许公开访问
         };
         
         for (String path : publicPaths) {
