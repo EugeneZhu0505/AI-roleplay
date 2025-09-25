@@ -3,7 +3,6 @@ package com.hzau.controller;
 import com.hzau.common.Result;
 import com.hzau.common.constants.ErrorCode;
 import com.hzau.dto.UserChatReq;
-import com.hzau.entity.Character;
 import com.hzau.entity.Conversation;
 import com.hzau.entity.Message;
 import com.hzau.service.AiRoleplayService;
@@ -84,21 +83,39 @@ public class ConversationController {
         
         try {
             log.info("创建新对话, userId: {}, characterId: {}, title: {}", userId, characterId, title);
-            return aiRoleplayService.startNewConversation(userId, characterId, title)
-                    .map(result -> {
-                        Map<String, Object> response = Map.of(
-                                "conversation", result.getConversation(),
-                                "opening", result.getOpening()
-                        );
-                        long responseTime = System.currentTimeMillis() - startTime;
-                        monitoringService.endApiCall("createConversation", callId, responseTime, true);
-                        return Result.success(response);
-                    })
-                    .onErrorResume(error -> {
-                        long responseTime = System.currentTimeMillis() - startTime;
-                        monitoringService.endApiCall("createConversation", callId, responseTime, false);
-                        return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "创建对话失败"));
-                    });
+            
+            // 调用服务创建新对话
+            Mono<com.hzau.service.AiRoleplayService.ConversationWithOpening> conversationMono = 
+                    aiRoleplayService.startNewConversation(userId, characterId, title);
+            
+            // 处理成功响应
+            Mono<Result<Map<String, Object>>> successHandler = conversationMono.map(result -> {
+                // 构建响应数据
+                Map<String, Object> response = Map.of(
+                        "conversation", result.getConversation(),
+                        "opening", result.getOpening()
+                );
+                
+                // 记录成功的监控信息
+                long responseTime = System.currentTimeMillis() - startTime;
+                monitoringService.endApiCall("createConversation", callId, responseTime, true);
+                
+                return Result.success(response);
+            });
+            
+            // 处理错误响应
+            Mono<Result<Map<String, Object>>> errorHandler = successHandler.onErrorResume(error -> {
+                log.error("创建对话服务调用失败", error);
+                
+                // 记录失败的监控信息
+                long responseTime = System.currentTimeMillis() - startTime;
+                monitoringService.endApiCall("createConversation", callId, responseTime, false);
+                
+                return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "创建对话失败"));
+            });
+            
+            return errorHandler;
+            
         } catch (Exception e) {
             log.error("创建新对话失败, userId: {}, characterId: {}", userId, characterId, e);
             long responseTime = System.currentTimeMillis() - startTime;
@@ -124,15 +141,14 @@ public class ConversationController {
         long startTime = System.currentTimeMillis();
         
         try {
-            log.info("发送消息, conversationId: {}, userId: {}, responseType: {}", 
-                    conversationId, userId, request.getResponseType());
+            log.info("发送消息, conversationId: {}, userId: {}",
+                    conversationId, userId);
             
-            // 根据响应类型选择不同的处理方式
-            String responseType = request.getResponseType();
+            // 根据输入类型选择不同的处理方式
             String inputType = request.getInputType();
             
-            if ("voice".equals(inputType)) {
-                // 语音输入：处理语音消息
+            if ("audio".equals(inputType)) {
+                // 语音聊天：接收语音，转文本，AI回复后转语音
                 String audioUrl = request.getAudioUrl();
                 String audioFormat = request.getAudioFormat();
                 if (audioUrl == null || audioUrl.trim().isEmpty()) {
@@ -142,77 +158,75 @@ public class ConversationController {
                     audioFormat = "mp3"; // 默认格式
                 }
                 
-                return aiRoleplayService.sendVoiceMessage(userId, conversationId, audioUrl, audioFormat)
-                        .map(response -> {
-                            long responseTime = System.currentTimeMillis() - startTime;
-                            monitoringService.endApiCall("sendMessage", callId, responseTime, true);
-                            return Result.success(response);
-                        })
-                        .onErrorResume(error -> {
-                            long responseTime = System.currentTimeMillis() - startTime;
-                            monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-                            return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音消息处理失败"));
-                        });
-            } else if ("voice".equals(responseType)) {
-                // voice类型：等待完整回复后返回（非流式）
-                return aiRoleplayService.sendMessage(userId, conversationId, request.getMessage())
-                        .map(response -> {
-                            long responseTime = System.currentTimeMillis() - startTime;
-                            monitoringService.endApiCall("sendMessage", callId, responseTime, true);
-                            return Result.success(response);
-                        })
-                        .onErrorResume(error -> {
-                            long responseTime = System.currentTimeMillis() - startTime;
-                            monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-                            return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "发送消息失败"));
-                        });
+                // 调用语音消息服务
+                Mono<AiRoleplayService.VoiceChatResponse> voiceMessageMono = aiRoleplayService.sendVoiceMessage(userId, conversationId, audioUrl, audioFormat);
+                
+                // 处理语音消息成功响应
+                Mono<Result<Object>> voiceSuccessHandler = voiceMessageMono.map(response -> {
+                    // 记录成功的监控信息
+                    long responseTime = System.currentTimeMillis() - startTime;
+                    monitoringService.endApiCall("sendMessage", callId, responseTime, true);
+                    
+                    return Result.success(response);
+                });
+                
+                // 处理语音消息错误响应
+                Mono<Result<Object>> voiceErrorHandler = voiceSuccessHandler.onErrorResume(error -> {
+                    log.error("语音消息处理失败", error);
+                    
+                    // 记录失败的监控信息
+                    long responseTime = System.currentTimeMillis() - startTime;
+                    monitoringService.endApiCall("sendMessage", callId, responseTime, false);
+                    
+                    return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音消息处理失败"));
+                });
+                
+                return voiceErrorHandler;
             } else {
-                // text类型或默认：文本输入处理
+                // 文本聊天：接收文本，返回流式文本
                 String message = request.getMessage();
                 if (message == null || message.trim().isEmpty()) {
                     return Mono.just(Result.fail(ErrorCode.ERROR400.getCode(), "文本输入时message不能为空"));
                 }
                 
-                if ("voice".equals(responseType)) {
-                    // 文本输入，语音输出：等待完整回复后返回（非流式）
-                    return aiRoleplayService.sendMessage(userId, conversationId, message)
-                            .map(response -> {
-                                long responseTime = System.currentTimeMillis() - startTime;
-                                monitoringService.endApiCall("sendMessage", callId, responseTime, true);
-                                return Result.success(response);
-                            })
-                            .onErrorResume(error -> {
-                                long responseTime = System.currentTimeMillis() - startTime;
-                                monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-                                return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "发送消息失败"));
-                            });
-                } else {
-                    // 文本输入，文本输出：流式输出
-                    return aiRoleplayService.sendMessageStream(userId, conversationId, message)
-                            .map(chunk -> "data: " + chunk + "\n\n")
-                            .concatWith(Flux.just("data: [DONE]\n\n"))
-                            .doOnComplete(() -> {
-                                long responseTime = System.currentTimeMillis() - startTime;
-                                monitoringService.endApiCall("sendMessage", callId, responseTime, true);
-                            })
-                            .onErrorResume(error -> {
-                                long responseTime = System.currentTimeMillis() - startTime;
-                                monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-                                log.error("流式消息发送失败", error);
-                                return Flux.just("data: " + "{\"error\":\"发送消息失败\"}\n\n");
-                            });
-                }
+                // 调用流式消息服务
+                Flux<String> messageStreamFlux = aiRoleplayService.sendMessageStream(userId, conversationId, message);
+                
+                // 格式化流式数据
+                Flux<String> formattedStreamFlux = messageStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
+                
+                // 添加结束标记
+                Flux<String> streamWithEndMarker = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
+                
+                // 处理流式响应完成事件
+                Flux<String> streamWithCompleteHandler = streamWithEndMarker.doOnComplete(() -> {
+                    // 记录成功的监控信息
+                    long responseTime = System.currentTimeMillis() - startTime;
+                    monitoringService.endApiCall("sendMessage", callId, responseTime, true);
+                });
+                
+                // 处理流式响应错误事件
+                Flux<String> streamWithErrorHandler = streamWithCompleteHandler.onErrorResume(error -> {
+                    log.error("流式消息发送失败", error);
+                    
+                    // 记录失败的监控信息
+                    long responseTime = System.currentTimeMillis() - startTime;
+                    monitoringService.endApiCall("sendMessage", callId, responseTime, false);
+                    
+                    return Flux.just("data: " + "{\"error\":\"发送消息失败\"}\n\n");
+                });
+                
+                return streamWithErrorHandler;
             }
         } catch (Exception e) {
             log.error("发送消息失败, conversationId: {}", conversationId, e);
             long responseTime = System.currentTimeMillis() - startTime;
             monitoringService.endApiCall("sendMessage", callId, responseTime, false);
             
-            // 根据输入类型和响应类型返回不同格式的错误
+            // 根据输入类型返回不同格式的错误
             String inputType = request.getInputType();
-            String responseType = request.getResponseType();
             
-            if ("voice".equals(inputType) || "voice".equals(responseType)) {
+            if ("audio".equals(inputType)) {
                 return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "发送消息失败"));
             } else {
                 return Flux.just("data: " + "{\"error\":\"发送消息失败\"}\n\n");

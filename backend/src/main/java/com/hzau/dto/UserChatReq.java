@@ -17,12 +17,9 @@ public class UserChatReq {
 
     @Schema(description = "用户消息", required = false, example = "你好，请介绍一下自己")
     private String message;
-    
-    @Schema(description = "响应类型", required = false, example = "text", allowableValues = {"text", "voice"})
-    private String responseType = "text"; // 默认为text类型（流式输出）
 
-    @Schema(description = "输入类型", required = false, example = "text", allowableValues = {"text", "voice"})
-    private String inputType = "text"; // 默认为text类型
+    @Schema(description = "输入类型", required = true, example = "text", allowableValues = {"text", "audio"})
+    private String inputType;
 
     @Schema(description = "语音文件URL", required = false, example = "https://example.com/audio.mp3")
     private String audioUrl;

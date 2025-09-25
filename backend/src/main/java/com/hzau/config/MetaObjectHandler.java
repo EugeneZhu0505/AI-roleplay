@@ -11,15 +11,17 @@ import java.time.LocalDateTime;
  * @package: com.hzau.config
  * @className: MetaObjectHandler
  * @author: zhuyuchen
- * @description: TODO
+ * @description: Mybatis-plus自动填充处理器
  * @date: 2025/9/22 下午7:47
  */
 @Slf4j
 @Component
 public class MetaObjectHandler implements com.baomidou.mybatisplus.core.handlers.MetaObjectHandler {
 
+
     /**
      * 插入时自动填充
+     * @param metaObject
      */
     @Override
     public void insertFill(MetaObject metaObject) {
@@ -37,6 +39,7 @@ public class MetaObjectHandler implements com.baomidou.mybatisplus.core.handlers
 
     /**
      * 更新时自动填充
+     * @param metaObject
      */
     @Override
     public void updateFill(MetaObject metaObject) {

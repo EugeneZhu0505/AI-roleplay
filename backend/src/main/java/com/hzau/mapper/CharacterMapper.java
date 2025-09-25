@@ -1,7 +1,7 @@
 package com.hzau.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.hzau.entity.Character;
+import com.hzau.entity.AiCharacter;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -13,5 +13,5 @@ import org.apache.ibatis.annotations.Mapper;
  * @date: 2025/9/23 下午2:56
  */
 @Mapper
-public interface CharacterMapper extends BaseMapper<Character> {
+public interface CharacterMapper extends BaseMapper<AiCharacter> {
 }

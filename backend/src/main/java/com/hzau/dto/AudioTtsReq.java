@@ -1,5 +1,6 @@
 package com.hzau.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -25,12 +26,14 @@ public class AudioTtsReq {
     @Schema(description = "音频参数")
     public static class AudioParam {
         @Schema(description = "音色类型", required = true, example = "qiniu_zh_female_wwxkjx")
+        @JsonProperty("voice_type")
         private String voiceType;
 
         @Schema(description = "音频编码", required = true, example = "mp3")
         private String encoding;
 
         @Schema(description = "语速", example = "1.0")
+        @JsonProperty("speed_ratio")
         private Float speedRatio = 1.0f;
     }
 

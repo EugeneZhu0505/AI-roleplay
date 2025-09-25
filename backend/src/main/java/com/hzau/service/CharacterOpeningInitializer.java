@@ -1,6 +1,6 @@
 package com.hzau.service;
 
-import com.hzau.entity.Character;
+import com.hzau.entity.AiCharacter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
@@ -40,7 +40,7 @@ public class CharacterOpeningInitializer {
 
             try {
                 // 获取所有激活的角色
-                List<Character> activeCharacters = characterService.getAllActiveCharacters();
+                List<AiCharacter> activeCharacters = characterService.getAllActiveCharacters();
                 log.info("找到 {} 个激活的角色", activeCharacters.size());
 
                 if (activeCharacters.isEmpty()) {

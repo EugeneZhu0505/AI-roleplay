@@ -6,15 +6,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.HttpClient;
 import reactor.util.retry.Retry;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 
 /**
@@ -33,21 +39,73 @@ public class QiniuAudioService {
     private final WebClient webClient;
     private final ConcurrentControlService concurrentControlService;
     private final Executor llmRequestExecutor;
+    private final QiniuUploadService qiniuUploadService;
 
     /**
      * 构造函数，初始化WebClient
      */
     public QiniuAudioService(QiniuAiConfig config,
                              ConcurrentControlService concurrentControlService,
-                             @Qualifier("llmRequestExecutor") Executor llmRequestExecutor) {
+                             @Qualifier("llmRequestExecutor") Executor llmRequestExecutor,
+                             QiniuUploadService qiniuUploadService) {
         this.config = config;
         this.concurrentControlService = concurrentControlService;
         this.llmRequestExecutor = llmRequestExecutor;
+        this.qiniuUploadService = qiniuUploadService;
+        
+        // 配置ExchangeStrategies以增加缓冲区大小限制
+        ExchangeStrategies strategies = ExchangeStrategies.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)) // 10MB
+                .build();
+        
+        // 配置HttpClient
+        HttpClient httpClient = HttpClient.create();
+        
         this.webClient = WebClient.builder()
                 .baseUrl(config.getPrimaryEndpoint())
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + config.getApiKey())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .exchangeStrategies(strategies)
                 .build();
+    }
+
+    /**
+     * 语音转文本 (ASR) - 支持本地文件上传到七牛云
+     * @param localAudioPath 本地音频文件路径
+     * @param audioFormat 音频格式
+     * @return 识别出的文本
+     */
+    public Mono<String> speechToTextFromLocalFile(String localAudioPath, String audioFormat) {
+        log.info("开始语音转文本（本地文件）, localPath: {}, format: {}", localAudioPath, audioFormat);
+        
+        // 验证输入参数
+        if (localAudioPath == null || localAudioPath.trim().isEmpty()) {
+            return Mono.error(new RuntimeException("本地音频文件路径不能为空"));
+        }
+        
+        if (audioFormat == null || audioFormat.trim().isEmpty()) {
+            return Mono.error(new RuntimeException("音频格式不能为空"));
+        }
+        
+        // 检查API配置
+        if (!isConfigValid()) {
+            return Mono.error(new RuntimeException("七牛云API配置无效"));
+        }
+
+        // 上传文件到七牛云并获取公网URL
+        return Mono.fromCallable(() -> {
+            try {
+                String publicUrl = qiniuUploadService.uploadFile(localAudioPath);
+                log.info("音频文件上传成功，公网URL: {}", publicUrl);
+                return publicUrl;
+            } catch (Exception e) {
+                log.error("上传音频文件到七牛云失败", e);
+                throw new RuntimeException("上传音频文件失败: " + e.getMessage());
+            }
+        })
+        .subscribeOn(Schedulers.boundedElastic())
+        .flatMap(publicUrl -> speechToText(publicUrl, audioFormat));
     }
 
     /**
@@ -58,35 +116,56 @@ public class QiniuAudioService {
      */
     public Mono<String> speechToText(String audioUrl, String audioFormat) {
         log.info("开始语音转文本, audioUrl: {}, format: {}", audioUrl, audioFormat);
+        
+        // 验证输入参数
+        if (audioUrl == null || audioUrl.trim().isEmpty()) {
+            return Mono.error(new RuntimeException("音频URL不能为空"));
+        }
+        
+        if (audioFormat == null || audioFormat.trim().isEmpty()) {
+            return Mono.error(new RuntimeException("音频格式不能为空"));
+        }
+        
+        // 检查API配置
+        if (!isConfigValid()) {
+            return Mono.error(new RuntimeException("七牛云API配置无效"));
+        }
 
         // 获取并发控制许可
-        return concurrentControlService.acquirePermit("system", "asr")
-                .flatMap(permit -> {
-                    // 构建ASR请求
-                    AudioAsrReq request = new AudioAsrReq();
-                    request.setModel(config.getAsr().getModel());
+        Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "asr");
+        
+        // 构建ASR请求并发送
+        Mono<String> asrRequestMono = permitMono.flatMap(permit -> {
+            // 构建ASR请求
+            AudioAsrReq request = new AudioAsrReq();
+            request.setModel(config.getAsr().getModel());
 
-                    AudioAsrReq.AudioParam audioParam = new AudioAsrReq.AudioParam();
-                    audioParam.setFormat(audioFormat);
-                    audioParam.setUrl(audioUrl);
-                    request.setAudio(audioParam);
+            AudioAsrReq.AudioParam audioParam = new AudioAsrReq.AudioParam();
+            audioParam.setFormat(audioFormat);
+            audioParam.setUrl(audioUrl);
+            request.setAudio(audioParam);
 
-                    return sendAsrRequest(request)
-                            .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
-                            .map(this::extractAsrText)
-                            .doOnSuccess(result -> {
-                                log.info("语音转文本成功: {}", result);
-                                concurrentControlService.releasePermit("system", "asr");
-                            })
-                            .doOnError(error -> {
-                                log.error("语音转文本失败", error);
-                                concurrentControlService.releasePermit("system", "asr");
-                            });
-                })
-                .onErrorResume(error -> {
-                    log.error("获取ASR并发许可失败", error);
-                    return Mono.error(new RuntimeException("语音识别服务繁忙，请稍后重试"));
-                });
+            return sendAsrRequest(request)
+                    .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
+                    .map(this::extractAsrText);
+        });
+        
+        // 处理成功响应
+        Mono<String> successHandlerMono = asrRequestMono.doOnSuccess(result -> {
+            log.info("语音转文本成功: {}", result);
+            concurrentControlService.releasePermit("system", "asr");
+        });
+        
+        // 处理错误响应
+        Mono<String> errorHandlerMono = successHandlerMono.doOnError(error -> {
+            log.error("语音转文本失败", error);
+            concurrentControlService.releasePermit("system", "asr");
+        });
+        
+        // 处理许可获取失败
+        return errorHandlerMono.onErrorResume(error -> {
+            return Mono.error(new RuntimeException("语音识别服务繁忙，请稍后重试"));
+        });
     }
 
     /**
@@ -158,33 +237,60 @@ public class QiniuAudioService {
     public Mono<AudioListRes> getVoiceList() {
         log.info("获取音色列表");
 
-        return webClient.get()
+        // 发送HTTP请求获取音色列表
+        Mono<AudioListRes> voiceListMono = webClient.get()
                 .uri("/voice/list")
                 .retrieve()
-                .bodyToMono(AudioListRes.class)
-                .timeout(Duration.ofSeconds(config.getTimeout()))
-                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(1))
-                        .filter(throwable -> !(throwable instanceof WebClientResponseException.BadRequest)))
-                .doOnError(error -> log.error("获取音色列表失败", error))
-                .onErrorMap(error -> new RuntimeException("获取音色列表失败: " + error.getMessage(), error));
+                .bodyToMono(AudioListRes.class);
+        
+        // 添加超时处理
+        Mono<AudioListRes> timeoutHandlerMono = voiceListMono.timeout(Duration.ofSeconds(config.getTimeout()));
+        
+        // 添加重试机制
+        Mono<AudioListRes> retryHandlerMono = timeoutHandlerMono.retryWhen(
+                Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(1))
+                        .filter(throwable -> !(throwable instanceof WebClientResponseException.BadRequest))
+        );
+        
+        // 添加错误日志记录
+        Mono<AudioListRes> errorLogHandlerMono = retryHandlerMono.doOnError(error -> 
+                log.error("获取音色列表失败", error)
+        );
+        
+        // 处理错误映射
+        return errorLogHandlerMono.onErrorMap(error -> 
+                new RuntimeException("获取音色列表失败: " + error.getMessage(), error)
+        );
     }
 
     /**
-     * 发送ASR请求
-     * @param request ASR请求
-     * @return ASR响应
+     * 发送ASR请求到七牛云API
      */
     private Mono<AudioAsrRes> sendAsrRequest(AudioAsrReq request) {
+        String endpoint = config.getPrimaryEndpoint() + "/voice/asr";
+        
         return webClient.post()
-                .uri("/voice/asr")
+                .uri(endpoint)
+                .header("Authorization", "Bearer " + config.getApiKey())
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(AudioAsrRes.class)
-                .timeout(Duration.ofSeconds(config.getTimeout()))
-                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(1))
-                        .filter(throwable -> !(throwable instanceof WebClientResponseException.BadRequest)))
-                .doOnError(error -> log.error("调用七牛云ASR API失败", error))
-                .onErrorMap(error -> new RuntimeException("语音识别服务调用失败: " + error.getMessage(), error));
+                .timeout(Duration.ofSeconds(config.getTimeout())) // 使用全局超时配置
+                .doOnError(WebClientResponseException.class, ex -> {
+                    log.error("ASR请求失败，HTTP状态码: {}, 响应体: {}", 
+                            ex.getStatusCode(), ex.getResponseBodyAsString());
+                })
+                .doOnError(error -> !(error instanceof WebClientResponseException), error -> {
+                    log.error("ASR请求发生其他错误", error);
+                })
+                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(2))
+                        .filter(throwable -> !(throwable instanceof WebClientResponseException &&
+                                ((WebClientResponseException) throwable).getStatusCode().is4xxClientError()))
+                        .doBeforeRetry(retrySignal -> {
+                            log.warn("ASR请求重试，第{}次，原因: {}", 
+                                    retrySignal.totalRetries() + 1, 
+                                    retrySignal.failure().getMessage());
+                        }));
     }
 
     /**
@@ -193,16 +299,30 @@ public class QiniuAudioService {
      * @return TTS响应
      */
     private Mono<AudioTtsRes> sendTtsRequest(AudioTtsReq request) {
+        String endpoint = config.getPrimaryEndpoint() + "/voice/tts";
+        
         return webClient.post()
-                .uri("/voice/tts")
+                .uri(endpoint)
+                .header("Authorization", "Bearer " + config.getApiKey())
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(AudioTtsRes.class)
                 .timeout(Duration.ofSeconds(config.getTimeout()))
-                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(1))
-                        .filter(throwable -> !(throwable instanceof WebClientResponseException.BadRequest)))
-                .doOnError(error -> log.error("调用七牛云TTS API失败", error))
-                .onErrorMap(error -> new RuntimeException("语音合成服务调用失败: " + error.getMessage(), error));
+                .doOnError(WebClientResponseException.class, ex -> {
+                    log.error("TTS请求失败，HTTP状态码: {}, 响应体: {}", 
+                            ex.getStatusCode(), ex.getResponseBodyAsString());
+                })
+                .doOnError(error -> !(error instanceof WebClientResponseException), error -> {
+                    log.error("TTS请求发生其他错误", error);
+                })
+                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(2))
+                        .filter(throwable -> !(throwable instanceof WebClientResponseException &&
+                                ((WebClientResponseException) throwable).getStatusCode().is4xxClientError()))
+                        .doBeforeRetry(retrySignal -> {
+                            log.warn("TTS请求重试，第{}次，原因: {}", 
+                                    retrySignal.totalRetries() + 1, 
+                                    retrySignal.failure().getMessage());
+                        }));
     }
 
     /**
@@ -211,12 +331,24 @@ public class QiniuAudioService {
      * @return 识别出的文本
      */
     private String extractAsrText(AudioAsrRes response) {
-        if (response == null || response.getData() == null || response.getData().getResult() == null) {
+        if (response == null) {
+            throw new RuntimeException("ASR响应数据为空");
+        }
+        
+        if (response.getData() == null) {
+            log.error("ASR响应的data字段为null，完整响应: {}", response);
+            throw new RuntimeException("ASR响应数据为空");
+        }
+        
+        if (response.getData().getResult() == null) {
+            log.error("ASR响应的result字段为null，data内容: {}", response.getData());
             throw new RuntimeException("ASR响应数据为空");
         }
 
         String text = response.getData().getResult().getText();
+        
         if (text == null || text.trim().isEmpty()) {
+            log.error("语音识别结果为空或空白，原始文本: '{}'", text);
             throw new RuntimeException("语音识别结果为空");
         }
 

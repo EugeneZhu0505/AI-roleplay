@@ -8,6 +8,7 @@ import com.hzau.dto.UserLoginRes;
 import com.hzau.dto.UserRegisterReq;
 import com.hzau.entity.User;
 import com.hzau.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
+@Tag(name = "用户认证", description = "用户认证相关接口")
 public class AuthController {
 
     @Autowired

@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * @package: com.hzau.config
  * @className: OpenApiConfig
  * @author: zhuyuchen
- * @description: TODO
+ * @description: Swagger/OpenAPI 3.0 配置类, 用于生成和配置API文档
  * @date: 2025/9/22 下午7:17
  */
 @Configuration

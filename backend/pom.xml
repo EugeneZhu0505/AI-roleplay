@@ -140,6 +140,13 @@
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
 
+		<!-- 七牛云Java SDK -->
+		<dependency>
+			<groupId>com.qiniu</groupId>
+			<artifactId>qiniu-java-sdk</artifactId>
+			<version>7.19.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

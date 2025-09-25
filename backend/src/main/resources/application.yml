@@ -45,23 +45,22 @@ qiniu:
     api-key: sk-1649a402ca3c7e9a8dd14158ae45fe8d33d9f5a37380ad2afc0809175846f603
     # 可选配置
     default-model: deepseek-v3
-    timeout: 30
-    max-retries: 3
-  
-  # JPA配置
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
-  
+    timeout: 60  # 增加超时时间到60秒，避免ASR请求超时
+    max-retries: 2  # 减少重试次数，避免过多重试
+    asr:
+      model: asr
+      timeout: 60  # ASR专用超时配置
+    tts:
+      model: tts-1
+      voice: alloy
+      timeout: 30
+  # 七牛云对象存储配置
+  kodo:
+    access-key: ${QINIU_ACCESS_KEY:L16boMfLHL7lkh15huJ5MDc08vydJ0s5oj35xG_x}
+    secret-key: ${QINIU_SECRET_KEY:jrNAFPTjDGHu4dpf8aaq1ZdKHZGaXKWki7U9eqrb}
+    bucket: ${QINIU_BUCKET:ai-roleplay-audio}
+    domain: ${QINIU_DOMAIN:t34w0mr3r.hd-bkt.clouddn.com}  # 七牛云CDN域名，用于生成公网访问URL
 
-  # WebSocket配置
-  websocket:
-    allowed-origins: "*"
 
 # MyBatis Plus配置
 mybatis-plus:
@@ -83,35 +82,7 @@ jwt:
   expiration: 86400000  # 24小时
   refresh-expiration: 604800000  # 7天
 
-# LLM API配置
-llm:
-  providers:
-    openai:
-      api-key: ${OPENAI_API_KEY:}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-      model: ${OPENAI_MODEL:gpt-3.5-turbo}
-      max-tokens: 1000
-      temperature: 0.7
-    qianwen:
-      api-key: ${QIANWEN_API_KEY:}
-      base-url: ${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
-      model: ${QIANWEN_MODEL:qwen-turbo}
-  default-provider: openai
 
-# 语音服务配置
-voice:
-  speech-recognition:
-    provider: baidu
-    baidu:
-      app-id: ${BAIDU_ASR_APP_ID:}
-      api-key: ${BAIDU_ASR_API_KEY:}
-      secret-key: ${BAIDU_ASR_SECRET_KEY:}
-  text-to-speech:
-    provider: baidu
-    baidu:
-      app-id: ${BAIDU_TTS_APP_ID:}
-      api-key: ${BAIDU_TTS_API_KEY:}
-      secret-key: ${BAIDU_TTS_SECRET_KEY:}
 # 服务器配置
 server:
   port: 8080

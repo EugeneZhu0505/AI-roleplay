@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 public class QiniuAiConfig {
 
     /**
-     * API密钥 - 请在application.yml中配置
+     * API密钥
      */
     private String apiKey;
 
@@ -68,6 +68,11 @@ public class QiniuAiConfig {
          * 支持的音频格式
          */
         private String[] supportedFormats = {"mp3", "wav", "ogg", "raw"};
+        
+        /**
+         * ASR请求超时时间（秒）
+         */
+        private int timeout = 60;
     }
 
     @Data

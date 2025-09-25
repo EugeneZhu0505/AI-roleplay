@@ -152,13 +152,20 @@ public class AiChatController {
 
         log.info("流式单次对话请求: {}", message);
 
-        return qiniuAiService.singleChatStream(message.trim())
-                .map(chunk -> "data: " + chunk + "\n\n")
-                .concatWith(Flux.just("data: [DONE]\n\n"))
-                .onErrorResume(error -> {
-                    log.error("流式对话失败", error);
-                    return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
-                });
+        // 调用AI服务获取流式回复
+        Flux<String> aiStreamFlux = qiniuAiService.singleChatStream(message.trim());
+        
+        // 格式化每个数据块为SSE格式
+        Flux<String> formattedStreamFlux = aiStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
+        
+        // 添加结束标记
+        Flux<String> completeStreamFlux = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
+        
+        // 处理错误情况
+        return completeStreamFlux.onErrorResume(error -> {
+            log.error("流式对话失败", error);
+            return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
+        });
     }
 
     /**
@@ -183,13 +190,20 @@ public class AiChatController {
 
         log.info("流式多轮对话请求 [{}]: {}", conversationId, message);
 
-        return qiniuAiService.multiTurnChatStream(conversationId, message.trim())
-                .map(chunk -> "data: " + chunk + "\n\n")
-                .concatWith(Flux.just("data: [DONE]\n\n"))
-                .onErrorResume(error -> {
-                    log.error("流式多轮对话失败", error);
-                    return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
-                });
+        // 调用AI服务获取流式回复
+        Flux<String> aiStreamFlux = qiniuAiService.multiTurnChatStream(conversationId, message.trim());
+        
+        // 格式化每个数据块为SSE格式
+        Flux<String> formattedStreamFlux = aiStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
+        
+        // 添加结束标记
+        Flux<String> completeStreamFlux = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
+        
+        // 处理错误情况
+        return completeStreamFlux.onErrorResume(error -> {
+            log.error("流式多轮对话失败", error);
+            return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
+        });
     }
 
     /**

@@ -134,56 +134,65 @@ public class QiniuAiService {
      */
     public Mono<String> multiTurnChat(String conversationId, String message, String model) {
         // 获取并发控制许可
-        return concurrentControlService.acquirePermit("system", "llm")
-                .flatMap(permit -> {
-                    return Mono.fromCallable(() -> {
-                        // 在会话管理线程池中处理会话历史
-                        List<MessageContent> history = conversationHistory.computeIfAbsent(conversationId, k -> new ArrayList<>());
-                        history.add(MessageContent.user(message));
-                        return new ArrayList<>(history); // 创建副本避免并发修改
-                    })
-                    .subscribeOn(Schedulers.fromExecutor(sessionManagementExecutor))
-                    .flatMap(history -> {
-                        LlmChatReq request = LlmChatReq.builder()
-                                .model(model)
-                                .messages(history)
-                                .stream(false)
-                                .temperature(0.7)
-                                .maxTokens(2000)
-                                .build();
+        Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "llm");
+        
+        // 处理会话历史
+        Mono<List<MessageContent>> historyMono = permitMono.flatMap(permit -> {
+            return Mono.fromCallable(() -> {
+                // 在会话管理线程池中处理会话历史
+                List<MessageContent> history = conversationHistory.computeIfAbsent(conversationId, k -> new ArrayList<>());
+                history.add(MessageContent.user(message));
+                return new ArrayList<>(history); // 创建副本避免并发修改
+            }).subscribeOn(Schedulers.fromExecutor(sessionManagementExecutor));
+        });
+        
+        // 发送聊天请求并处理响应
+        Mono<String> chatResponseMono = historyMono.flatMap(history -> {
+            LlmChatReq request = LlmChatReq.builder()
+                    .model(model)
+                    .messages(history)
+                    .stream(false)
+                    .temperature(0.7)
+                    .maxTokens(2000)
+                    .build();
 
-                        return sendChatReq(request)
-                                .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
-                                .map(this::extractMessageContent)
-                                .doOnSuccess(response -> {
-                                    // 在消息处理线程池中更新会话历史
-                                    Mono.fromRunnable(() -> {
-                                        if (response != null) {
-                                            List<MessageContent> currentHistory = conversationHistory.get(conversationId);
-                                            if (currentHistory != null) {
-                                                currentHistory.add(MessageContent.assistant(response));
-                                                // 限制历史长度，避免token过多
-                                                if (currentHistory.size() > 20) {
-                                                    currentHistory.subList(0, currentHistory.size() - 20).clear();
-                                                }
-                                            }
-                                        }
-                                    })
-                                    .subscribeOn(Schedulers.fromExecutor(messageProcessingExecutor))
-                                    .subscribe();
-                                    
-                                    concurrentControlService.releasePermit("system", "llm");
-                                })
-                                .doOnError(error -> {
-                                    log.error("多轮对话失败", error);
-                                    concurrentControlService.releasePermit("system", "llm");
-                                });
-                    });
-                })
-                .onErrorResume(error -> {
-                    log.error("获取并发许可失败", error);
-                    return Mono.error(new RuntimeException("系统繁忙，请稍后重试"));
-                });
+            return sendChatReq(request)
+                    .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
+                    .map(this::extractMessageContent);
+        });
+        
+        // 处理成功响应
+        Mono<String> successHandlerMono = chatResponseMono.doOnSuccess(response -> {
+            // 在消息处理线程池中更新会话历史
+            Mono.fromRunnable(() -> {
+                if (response != null) {
+                    List<MessageContent> currentHistory = conversationHistory.get(conversationId);
+                    if (currentHistory != null) {
+                        currentHistory.add(MessageContent.assistant(response));
+                        // 限制历史长度，避免token过多
+                        if (currentHistory.size() > 20) {
+                            currentHistory.subList(0, currentHistory.size() - 20).clear();
+                        }
+                    }
+                }
+            })
+            .subscribeOn(Schedulers.fromExecutor(messageProcessingExecutor))
+            .subscribe();
+            
+            concurrentControlService.releasePermit("system", "llm");
+        });
+        
+        // 处理错误响应
+        Mono<String> errorHandlerMono = successHandlerMono.doOnError(error -> {
+            log.error("多轮对话失败", error);
+            concurrentControlService.releasePermit("system", "llm");
+        });
+        
+        // 处理许可获取失败
+        return errorHandlerMono.onErrorResume(error -> {
+            log.error("获取并发许可失败", error);
+            return Mono.error(new RuntimeException("系统繁忙，请稍后重试"));
+        });
     }
 
     /**
@@ -307,14 +316,16 @@ public class QiniuAiService {
      * @return AI回复流
      */
     public Flux<String> multiTurnChatStream(String conversationId, String message, String model) {
-        return Mono.fromCallable(() -> {
+        // 处理会话历史
+        Mono<List<MessageContent>> historyMono = Mono.fromCallable(() -> {
             // 在会话管理线程池中处理会话历史
             List<MessageContent> history = conversationHistory.computeIfAbsent(conversationId, k -> new ArrayList<>());
             history.add(MessageContent.user(message));
-            return new ArrayList<>(history); // 创建副本避免并发修改
-        })
-        .subscribeOn(Schedulers.fromExecutor(sessionManagementExecutor))
-        .flatMapMany(history -> {
+            return (List<MessageContent>) new ArrayList<>(history); // 创建副本避免并发修改
+        }).subscribeOn(Schedulers.fromExecutor(sessionManagementExecutor));
+        
+        // 发送流式聊天请求并处理响应
+        return historyMono.flatMapMany(history -> {
             LlmChatReq request = LlmChatReq.builder()
                     .model(model)
                     .messages(history)
@@ -325,44 +336,51 @@ public class QiniuAiService {
 
             StringBuilder responseBuilder = new StringBuilder();
             
-            return sendChatStreamReq(request)
-                    .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
-                    .doOnNext(chunk -> {
-                        // 累积响应内容
-                        try {
-                            // 解析流式响应中的内容
-                            if (chunk.startsWith("{") && chunk.contains("\"content\"")) {
-                                // 简单的JSON解析，实际项目中建议使用Jackson
-                                String content = extractContentFromStreamChunk(chunk);
-                                if (content != null && !content.isEmpty()) {
-                                    responseBuilder.append(content);
-                                }
-                            }
-                        } catch (Exception e) {
-                            log.warn("解析流式响应块失败: {}", chunk, e);
+            // 发送流式请求
+            Flux<String> streamRequestFlux = sendChatStreamReq(request)
+                    .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor));
+            
+            // 处理每个数据块
+            Flux<String> processedStreamFlux = streamRequestFlux.doOnNext(chunk -> {
+                // 累积响应内容
+                try {
+                    // 解析流式响应中的内容
+                    if (chunk.startsWith("{") && chunk.contains("\"content\"")) {
+                        // 简单的JSON解析，实际项目中建议使用Jackson
+                        String content = extractContentFromStreamChunk(chunk);
+                        if (content != null && !content.isEmpty()) {
+                            responseBuilder.append(content);
                         }
-                    })
-                    .doOnComplete(() -> {
-                        // 流式响应完成后，在消息处理线程池中将完整回复添加到历史
-                        Mono.fromRunnable(() -> {
-                            String fullResponse = responseBuilder.toString();
-                            if (!fullResponse.isEmpty()) {
-                                List<MessageContent> currentHistory = conversationHistory.get(conversationId);
-                                if (currentHistory != null) {
-                                    currentHistory.add(MessageContent.assistant(fullResponse));
-                                    // 限制历史长度，避免token过多
-                                    if (currentHistory.size() > 20) {
-                                        currentHistory.subList(0, currentHistory.size() - 20).clear();
-                                    }
-                                }
+                    }
+                } catch (Exception e) {
+                    log.warn("解析流式响应块失败: {}", chunk, e);
+                }
+            });
+            
+            // 处理流式响应完成事件
+            Flux<String> streamWithCompleteHandler = processedStreamFlux.doOnComplete(() -> {
+                // 流式响应完成后，在消息处理线程池中将完整回复添加到历史
+                Mono.fromRunnable(() -> {
+                    String fullResponse = responseBuilder.toString();
+                    if (!fullResponse.isEmpty()) {
+                        List<MessageContent> currentHistory = conversationHistory.get(conversationId);
+                        if (currentHistory != null) {
+                            currentHistory.add(MessageContent.assistant(fullResponse));
+                            // 限制历史长度，避免token过多
+                            if (currentHistory.size() > 20) {
+                                currentHistory.subList(0, currentHistory.size() - 20).clear();
                             }
-                        })
-                        .subscribeOn(Schedulers.fromExecutor(messageProcessingExecutor))
-                        .subscribe();
-                    })
-                    .doOnError(error -> {
-                        log.error("流式多轮对话失败", error);
-                    });
+                        }
+                    }
+                })
+                .subscribeOn(Schedulers.fromExecutor(messageProcessingExecutor))
+                .subscribe();
+            });
+            
+            // 处理流式响应错误事件
+            return streamWithCompleteHandler.doOnError(error -> {
+                log.error("流式多轮对话失败", error);
+            });
         });
     }
 

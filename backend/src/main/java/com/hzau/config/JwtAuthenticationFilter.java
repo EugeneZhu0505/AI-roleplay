@@ -97,9 +97,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 检查是否是公开路径
+     * 判断是否是公开路径
+     * @param requestURI
+     * @return
      */
     private boolean isPublicPath(String requestURI) {
+        // 允许公开访问的pai
         String[] publicPaths = {
             "/api/auth/login",
             "/api/auth/register",
@@ -107,7 +110,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/v3/api-docs",
             "/actuator",
             "/error",
-            "/files/"  // 添加文件访问路径，允许公开访问
+            "/files/"
         };
         
         for (String path : publicPaths) {
@@ -118,11 +121,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return false;
     }
 
+
     /**
      * 从请求中获取JWT token
      * 支持两种格式：
      * 1. Authorization: Bearer <token>
      * 2. accessToken: <token>
+     * @param request
+     * @return
      */
     private String getTokenFromRequest(HttpServletRequest request) {
         // 首先检查 Authorization 头

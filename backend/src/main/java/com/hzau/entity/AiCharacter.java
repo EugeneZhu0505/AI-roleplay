@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.apache.ibatis.type.Alias;
 
 import java.time.LocalDateTime;
 
@@ -20,8 +19,7 @@ import java.time.LocalDateTime;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("characters")
-@Alias("AiCharacter")
-public class Character {
+public class AiCharacter {
 
     @Schema(description = "角色ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)

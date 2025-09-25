@@ -32,8 +32,6 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
      * @return 保存的消息
      */
     public Message saveUserMessage(Long conversationId, String textContent) {
-        log.info("保存用户消息, conversationId: {}, textContent: {}", conversationId, textContent);
-
         Message message = new Message();
         message.setConversationId(conversationId);
         message.setSenderType("user");
@@ -56,8 +54,6 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
      * @return 保存的消息
      */
     public Message saveCharacterMessage(Long conversationId, String textContent) {
-        log.info("保存角色消息, conversationId: {}, textContent: {}", conversationId, textContent);
-
         Message message = new Message();
         message.setConversationId(conversationId);
         message.setSenderType("character");
@@ -84,9 +80,6 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
      */
     public Message saveAudioMessage(Long conversationId, String senderType, String audioUrl,
                                     Integer audioDuration, String textContent) {
-        log.info("保存音频消息, conversationId: {}, senderType: {}, audioUrl: {}",
-                conversationId, senderType, audioUrl);
-
         Message message = new Message();
         message.setConversationId(conversationId);
         message.setSenderType(senderType);
@@ -109,13 +102,10 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
      * @return 保存的消息
      */
     public Message saveUserVoiceMessage(Long conversationId, String textContent, String audioUrl, Integer audioDuration) {
-        log.info("保存用户语音消息, conversationId: {}, textContent: {}, audioUrl: {}", 
-                conversationId, textContent, audioUrl);
-
         Message message = new Message();
         message.setConversationId(conversationId);
         message.setSenderType("user");
-        message.setContentType("voice");
+        message.setContentType("audio");
         message.setTextContent(textContent);
         message.setAudioUrl(audioUrl);
         message.setAudioDuration(audioDuration);
@@ -138,13 +128,10 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
      * @return 保存的消息
      */
     public Message saveCharacterVoiceMessage(Long conversationId, String textContent, String audioUrl, Integer audioDuration) {
-        log.info("保存角色语音消息, conversationId: {}, textContent: {}, audioUrl: {}", 
-                conversationId, textContent, audioUrl);
-
         Message message = new Message();
         message.setConversationId(conversationId);
         message.setSenderType("character");
-        message.setContentType("voice");
+        message.setContentType("audio");
         message.setTextContent(textContent);
         message.setAudioUrl(audioUrl);
         message.setAudioDuration(audioDuration);
@@ -164,7 +151,6 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
      * @return 消息列表
      */
     public List<Message> getConversationMessages(Long conversationId) {
-        log.info("获取对话消息列表, conversationId: {}", conversationId);
         QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("conversation_id", conversationId)
                 .orderBy(true, true, "created_at");
