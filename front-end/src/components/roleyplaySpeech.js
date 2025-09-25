@@ -16,7 +16,15 @@ const RoleplaySpeech = ({handleSpeechClick, roleplayDetailedInformation}) => {
     return (
         <div className='roleplaySpeech'>
             <div className="roleplaySpeech-container">
-                <img src={roleplayDetailedInformation.cover} className="roleplaySpeech-img" />
+                <div className="roleplaySpeech-img-container">
+                    <img src={roleplayDetailedInformation.cover} className="roleplaySpeech-img" />
+                    <div className="ripple-container">
+                        <div className="ripple"></div>
+                        <div className="ripple"></div>
+                        <div className="ripple"></div>
+                        <div className="ripple"></div>
+                    </div>
+                </div>
                 <div className="roleplaySpeech-content">
                     <div className="voice-wave">
                         <span className="bar" />
