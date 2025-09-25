@@ -1,5 +1,5 @@
 import './styles/roleplaySpeech.css'
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const roleplayDetailedInformation = {
     cover: "",
@@ -8,9 +8,15 @@ const roleplayDetailedInformation = {
 }
 
 const RoleplaySpeech = ({handleSpeechClick, roleplayDetailedInformation}) => {
+    const [isPlaying, setIsPlaying] = useState(false);
 
     const closeSpeech = () => {
         handleSpeechClick(false)
+    }
+
+    // 模拟音频播放状态切换（可以根据实际音频播放状态来控制）
+    const togglePlayingState = () => {
+        setIsPlaying(!isPlaying);
     }
 
     return (
@@ -19,10 +25,10 @@ const RoleplaySpeech = ({handleSpeechClick, roleplayDetailedInformation}) => {
                 <div className="roleplaySpeech-img-container">
                     <img src={roleplayDetailedInformation.cover} className="roleplaySpeech-img" />
                     <div className="ripple-container">
-                        <div className="ripple"></div>
-                        <div className="ripple"></div>
-                        <div className="ripple"></div>
-                        <div className="ripple"></div>
+                        <div className={`ripple ${isPlaying ? 'playing' : ''}`}></div>
+                        <div className={`ripple ${isPlaying ? 'playing' : ''}`}></div>
+                        <div className={`ripple ${isPlaying ? 'playing' : ''}`}></div>
+                        <div className={`ripple ${isPlaying ? 'playing' : ''}`}></div>
                     </div>
                 </div>
                 <div className="roleplaySpeech-content">
@@ -32,7 +38,20 @@ const RoleplaySpeech = ({handleSpeechClick, roleplayDetailedInformation}) => {
                         <span className="bar" />
                         <span className="bar" />
                         <span className="bar" />
-                    </div>    
+                    </div>
+                    
+                    {/* 临时按钮用于测试播放状态切换 */}
+                    <button onClick={togglePlayingState} style={{
+                        margin: '20px',
+                        padding: '10px 20px',
+                        backgroundColor: isPlaying ? '#ff4444' : '#44ff44',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer'
+                    }}>
+                        {isPlaying ? '停止播放' : '开始播放'}
+                    </button>
                 </div>
 
                 <div>
