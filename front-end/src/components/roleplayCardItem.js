@@ -3,8 +3,21 @@ import "./styles/roleplayCardItem.css"
 
 const RoleplayCardItem = (props) => {
 
+
+    const handleClick = () => {
+        props.roleplay.handleRoleplayCardClick({
+            key: props.roleplay.key,
+            cover: props.roleplay.cover,
+            name: props.roleplay.name,
+            builder: props.roleplay.builder,
+            desc: props.roleplay.desc,
+            likeCount: props.roleplay.likeCount,
+        })
+    }
+
+
     return(
-        <div className="roleplay-card-item-container">
+        <div className="roleplay-card-item-container" key={props.roleplay.key} onClick={handleClick}>
             <img src={props.roleplay.cover} className="roleplay-card-item-image" />
 
             <div className="roleplay-card-item-text-container">

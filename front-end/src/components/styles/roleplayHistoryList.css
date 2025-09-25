@@ -1,0 +1,36 @@
+.roleplay-history-list-container{
+    width: 100%;
+    height: 100%;
+    justify-content: flex-start;
+    box-sizing: border-box;
+}
+
+.roleplay-history-list-title{
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7a7979;
+}
+
+.roleplay-history-list-item-container{
+    overflow-y: auto;
+    width: 100%;
+    height: 450px;
+    flex-direction: column;
+    align-items: start;
+    justify-content: start;
+    background-color: transparent;
+}
+
+.roleplay-history-list-item-container::-webkit-scrollbar {
+    width: 5px; /* 滚动条宽度 */
+}
+
+.roleplay-history-list-item-container::-webkit-scrollbar-track {
+    background-color: transparent; /* 滚动条轨道背景颜色 */
+}
+
+.roleplay-history-list-item-container::-webkit-scrollbar-thumb {
+    background-color: #858585d3; /* 滚动条滑块背景颜色 */
+    border-radius: 5px; /* 滚动条滑块圆角 */
+}

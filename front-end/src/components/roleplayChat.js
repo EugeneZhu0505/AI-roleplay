@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './styles/roleplayChat.css';
 import { createConversation, postRequest } from './utils/api';
 
-const RoleplayChat = () => {
+const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
 
     // 保存当前对话的消息列表
     const [messages, setMessages] = useState([])
@@ -12,39 +12,14 @@ const RoleplayChat = () => {
 
     const messagesEndRef = useRef(null);
     
-    const handleInputChange = (e) => {
-        setInput(e)
+    const handleInputChange = (value) => {
+        setInput(value)
     };
 
     const handleSendClick = async() => {
         if (input.trim() === "") return;
         handleCreateReponse(input, "user");
         setInput("");
-        
-        try {
-                // 发送消息并获取响应
-                const response = await postRequest('http://122.205.70.147:8080/api/conversations/1014/messages?userId=5', {
-                    "message": input,
-                    "reponseType": "voice",
-                });
-
-
-                // 检查响应状态码（假设postMessage返回的response包含status属性）
-                const result = response.data;
-                // 检查result数据结构
-                    setMessages([
-                        ...messages,
-                        {
-                            id: messages.length + 1,
-                            content: result,
-                            sender: "ai",
-                        }
-                    ]);
-
-            } catch (error) {
-                console.error('Error occurred during postMessage:', error);
-            }
-
     }
 
 
@@ -56,10 +31,10 @@ const RoleplayChat = () => {
         scrollButtom();
     },[messages])
 
-    useEffect(()=> {
-        handleCreate();
-        postRequest('http://122.205.70.147:8080/api/conversations/1014/activate?userId=5', {})
-    },[])
+    // useEffect(()=> {
+    //     handleCreate();
+    //     postRequest('http://122.205.70.147:8080/api/conversations/1014/activate?userId=5', {})
+    // },[])
 
 
   const handleCreateReponse = (result, sender) =>{
@@ -73,25 +48,33 @@ const RoleplayChat = () => {
         ]);
     }  
 
-  const handleCreate = async () => {
-    try {
-        const reponse = await createConversation(5, 1, "打招呼");
+//   const handleCreate = async () => {
+//     try {
+//         const response = await createConversation(5, 1, "打招呼");
+//         const data = await response.json();
+//         const result = data.data; // 假设API返回格式为{data: ...}
 
-        const result = await reponse.json().data();
+//         // 处理成功逻辑
+//         handleCreateReponse(result, "ai");
+//     } catch (error) {
+//         console.error('创建对话失败:', error);
+//         alert('创建对话失败，请稍后重试');
+//     }
+//   };
 
-        // 处理成功逻辑（如跳转到对话页、更新列表等
-        handleCreateReponse(result, "ai");
-    } catch (error) {
-        alert('创建对话失败: ' + error.message);
+
+    const openSpeech = () =>{
+        handleSpeechClick(true)
     }
-  };
+
 
 
     return(
         <div className='roleplay-page-container'>
             <div className="roleplay-chat-container">
                 <div className="roleplay-chat-header">
-                    <h2>AI角色</h2>
+                    <img src={roleplayDetailedInformation.cover} className='roleplay-chat-header-image'/>
+
                 </div>
 
                 <div className="roleplay-chat-messages">
@@ -129,12 +112,12 @@ const RoleplayChat = () => {
             <div className="roleplay-setting-container">
                 <div className='roleplay-setting-header'>
                     <div className='roleplay-image-container'>
-                        <img src={require('../imgs/place_charac_image.png')} className='roleplay-image'/>
+                        <img src={roleplayDetailedInformation.cover} className='roleplay-image'/>
                     </div>
                     <div className='roleplay-detail-container'>
-                        <div className='AI-role-Name'>哈利波特</div>
-                        <div className='AI-role-builder'>由 @zy 创建</div>
-                        <div className='AI-role-likeNumber'>10.5m 次互动</div>
+                        <div className='AI-role-Name'>{roleplayDetailedInformation?.name || 'AI角色'}</div>
+                        <div className='AI-role-builder'>由 @{roleplayDetailedInformation?.builder || '系统'} 创建</div>
+                        <div className='AI-role-likeNumber'>{roleplayDetailedInformation?.likeCount || 0} 次互动</div>
                     </div>
                 </div>
 
@@ -144,7 +127,7 @@ const RoleplayChat = () => {
                             <img src={require('../imgs/chat-new.png')} className='roleplay-setting-image'/>
                             新对话
                         </div>
-                        <div className='roleplay-setting-ur-item'>
+                        <div className='roleplay-setting-ur-item' onClick={openSpeech}>
                             <img src={require('../imgs/voice.png')} className='roleplay-setting-image'/>
                             语音
                         </div>
