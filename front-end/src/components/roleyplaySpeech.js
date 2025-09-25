@@ -25,17 +25,12 @@ const RoleplaySpeech = ({handleSpeechClick, roleplayDetailedInformation}) => {
                         <div className="ripple"></div>
                     </div>
                 </div>
-                <div className="roleplaySpeech-content">
-                    <div className="voice-wave">
-                        <span className="bar" />
-                        <span className="bar" />
-                        <span className="bar" />
-                        <span className="bar" />
-                        <span className="bar" />
-                    </div>    
-                </div>
 
                 <div>
+
+                </div>
+                
+                <div className='roleplaySpeech-close-btn-container'>
                     <button className="roleplaySpeech-close-btn" onClick={closeSpeech}>
                         挂断
                     </button>
