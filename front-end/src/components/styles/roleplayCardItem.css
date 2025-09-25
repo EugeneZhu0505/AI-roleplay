@@ -1,0 +1,69 @@
+.roleplay-card-item-container {
+    display:flex;
+    justify-items: center;
+    height:166px;
+    width:312px;
+    background-color: rgba(224, 224, 224, 0.515);
+    border-radius: 25px;
+    margin:5px;
+    margin-top:10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.roleplay-card-item-container:hover {
+    background-color: rgba(224, 224, 224, 0.955); 
+}
+
+.roleplay-card-item-image{
+    height:130px;
+    width:120px;
+    border-radius: 25px;
+    margin:20px
+}
+
+.roleplay-card-item-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    margin: 20px 0px 0 0px;
+    width: 120px;
+}
+
+.roleplay-card-item-text-name {
+    font-size: 18px;
+    font-weight: 500;
+    color: #141515;
+}
+
+.roleplay-card-item-text-builder {
+    font-size: 12px;
+    font-weight: 400;
+    color: #4b4d4d;
+    margin-top:5px;
+}
+
+.roleplay-card-item-text-desc {
+    font-size: 13px;
+    font-weight: 400;
+    color: #424545;
+    margin-top:5px;
+}
+
+.roleplay-card-item-text-like-container{
+    margin-top:30px;
+    display:flex;
+}
+
+.roleplay-card-item-text-like-icon{
+    height:20px;
+    width:20px;
+}
+
+.roleplay-card-item-text-like-count{
+    display: flex;
+    font-size: 15px;
+    font-weight: 400;
+    color: #4b4d4d;
+    margin-left:5px;
+}

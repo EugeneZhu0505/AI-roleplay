@@ -51,16 +51,16 @@ export const request = async (url, method, data = null, headers = {}) => {
 };
 
 
-export const postRequest = async (url, data, headers = {}) => {
+export const postRequest = async (url, data) => {
   // 默认请求头，支持JSON格式
   const defaultHeaders = {
     'Content-Type': 'application/json',
-    ...headers
+    'accessToken' : 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlcjExMTEiLCJ1c2VySWQiOjUsImlhdCI6MTc1ODYxOTEwMywiZXhwIjoxNzU4NzA1NTAzfQ.UTr99fJvT7JQENTHFd3eecx5JBgmCU4dlsZrIfWutJY',
   };
 
   try {
     // 发送POST请求
-    const response = await fetch(url, {
+    const response = await fetch(url,{
       method: 'POST',
       headers: defaultHeaders,
       body: JSON.stringify(data) // 将数据转换为JSON字符串
@@ -85,16 +85,10 @@ export const postRequest = async (url, data, headers = {}) => {
 
 
 export const createConversation = async (userId, characterId, title = '') => {
-  // 构造查询参数对象
-  const params = {
-    userId,
-    characterId,
-    ...(title ? { title } : {}) // 标题可选，存在时才传递
-  };
 
   const defaultHeaders = {
     'Content-Type': 'application/json',
-    'accessToken' : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlcjExMTEiLCJ1c2VySWQiOjUsImlhdCI6MTc1ODYxOTEwMywiZXhwIjoxNzU4NzA1NTAzfQ.UTr99fJvT7JQENTHFd3eecx5JBgmCU4dlsZrIfWutJY"
+    'accessToken' : 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlcjExMTEiLCJ1c2VySWQiOjUsImlhdCI6MTc1ODYxOTEwMywiZXhwIjoxNzU4NzA1NTAzfQ.UTr99fJvT7JQENTHFd3eecx5JBgmCU4dlsZrIfWutJY',
   };
 
   try {
@@ -106,7 +100,47 @@ export const createConversation = async (userId, characterId, title = '') => {
     );
     return response;
   } catch (error) {
-    console.error('创建对话失败:', error.message);
     throw error;
   }
 };
+
+
+export const RegisterPost = async (url, body) => {
+  try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP错误: 状态码 ${response.status}`);
+      }
+      return await response.json();
+  } catch (error) {
+    throw error; 
+  }
+}
+
+export const LoginPost = async (url, body) => {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok){
+      throw new Error(`HTTP错误: 状态码 ${response.status}`);
+    }
+    
+    return await response.json()
+
+  } catch(error){
+    throw error;
+  }
+}

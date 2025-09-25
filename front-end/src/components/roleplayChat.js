@@ -1,30 +1,50 @@
 import { useState, useRef, useEffect } from 'react';
 import './styles/roleplayChat.css';
-import { createConversation } from './utils/api';
+import { createConversation, postRequest } from './utils/api';
 
 const RoleplayChat = () => {
 
-    const [messages, setMessages] = useState([
-    ])
+    // 保存当前对话的消息列表
+    const [messages, setMessages] = useState([])
 
+    // 输入框状态
     const [input, setInput] = useState("");
+
     const messagesEndRef = useRef(null);
     
     const handleInputChange = (e) => {
         setInput(e)
     };
 
-    const handleSendClick = () => {
+    const handleSendClick = async() => {
         if (input.trim() === "") return;
-        setMessages([
-            ...messages,
-            {
-                id: messages.length + 1,
-                content: input,
-                sender: "user",
-            }
-        ]);
+        handleCreateReponse(input, "user");
         setInput("");
+        
+        try {
+                // 发送消息并获取响应
+                const response = await postRequest('http://122.205.70.147:8080/api/conversations/1014/messages?userId=5', {
+                    "message": input,
+                    "reponseType": "voice",
+                });
+
+
+                // 检查响应状态码（假设postMessage返回的response包含status属性）
+                const result = response.data;
+                // 检查result数据结构
+                    setMessages([
+                        ...messages,
+                        {
+                            id: messages.length + 1,
+                            content: result,
+                            sender: "ai",
+                        }
+                    ]);
+
+            } catch (error) {
+                console.error('Error occurred during postMessage:', error);
+            }
+
     }
 
 
@@ -38,33 +58,33 @@ const RoleplayChat = () => {
 
     useEffect(()=> {
         handleCreate();
+        postRequest('http://122.205.70.147:8080/api/conversations/1014/activate?userId=5', {})
     },[])
 
 
-  const handleCreateReponse = (response) =>{
+  const handleCreateReponse = (result, sender) =>{
         setMessages([
             ...messages,
             {
                 id: messages.length + 1,
-                content: response["data"]["opening"],
-                sender: "ai",
+                content: result,
+                sender: sender,
             }
         ]);
     }  
 
   const handleCreate = async () => {
     try {
-      const result = await createConversation(5, 1, "打招呼");
-      console.log('新对话创建成功:', result);
-      // 处理成功逻辑（如跳转到对话页、更新列表等   ）
-        handleCreateReponse(result)
+        const reponse = await createConversation(5, 1, "打招呼");
+
+        const result = await reponse.json().data();
+
+        // 处理成功逻辑（如跳转到对话页、更新列表等
+        handleCreateReponse(result, "ai");
     } catch (error) {
-      alert('创建对话失败: ' + error.message);
-    } finally {
+        alert('创建对话失败: ' + error.message);
     }
   };
-
-
 
 
     return(
@@ -80,8 +100,11 @@ const RoleplayChat = () => {
                         key={message.id}
                         className={`message ${message.sender === "ai" ? "ai-message" : "user-message"}`}
                     >
-                        <div className="message-sender">
-                        {message.sender === "ai" ? "AI" : "你"}
+                        <div className='message-container'>
+                            <img src={require('../imgs/place_charac_image.png')} className='message-image'/>
+                            <div className="message-sender">
+                                {message.sender === "ai" ? "AI" : "你"}
+                            </div>
                         </div>
                         <div className="message-content">{message.content}</div>
                     </div>
@@ -105,37 +128,43 @@ const RoleplayChat = () => {
 
             <div className="roleplay-setting-container">
                 <div className='roleplay-setting-header'>
-                    <div className='roleplay-image'>
+                    <div className='roleplay-image-container'>
+                        <img src={require('../imgs/place_charac_image.png')} className='roleplay-image'/>
                     </div>
-                    <div className='roleplay-build-detail'>
-
+                    <div className='roleplay-detail-container'>
+                        <div className='AI-role-Name'>哈利波特</div>
+                        <div className='AI-role-builder'>由 @zy 创建</div>
+                        <div className='AI-role-likeNumber'>10.5m 次互动</div>
                     </div>
                 </div>
 
                 <div className='roleplay-setting-body'>
-                    <ur>
-                        <div>
-                            新聊天
+                    <ur className='roleplay-setting-ur-container'>
+                        <div className='roleplay-setting-ur-item'>
+                            <img src={require('../imgs/chat-new.png')} className='roleplay-setting-image'/>
+                            新对话
                         </div>
-                        <div>
+                        <div className='roleplay-setting-ur-item'>
+                            <img src={require('../imgs/voice.png')} className='roleplay-setting-image'/>
                             语音
                         </div>
-                        <div>
+                        <div className='roleplay-setting-ur-item'>
+                            <img src={require('../imgs/history.png')} className='roleplay-setting-image'/>
                             历史记录
                         </div>
-                        <div>
+                        <div className='roleplay-setting-ur-item'>
+                            <img src={require('../imgs/character.png')} className='roleplay-setting-image'/>
                             角色详细
                         </div>
-                        <div>
-                            模型选择
+                        <div className='roleplay-setting-ur-item'>
+                            <img src={require('../imgs/modelbim.png')} className='roleplay-setting-image'/>
+                            模型
                         </div>
                         
                     </ur>
                 </div>
             </div>
 
-
-        
         </div>
     )
 
