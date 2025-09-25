@@ -32,19 +32,20 @@ const Login = ({ visible, onClose, successLogin }) => {
                 "password": password,
             };
             
-            try{
-                const result = await LoginPost('http://122.205.70.147:8080/api/auth/login', fromData)
-                if (result) {
-                    localStorage.setItem('accessToken', result.data.accessToken);
-                    localStorage.setItem('userId', result.data.userId);
-                    localStorage.setItem('username', result.data.username);
-                    localStorage.setItem('image', result.data.avatarUrl);
-                    successLogin(true);
-                    onClose();
-                }
-            } catch (error) {
-                alert('登录请求出错：' + error.message);
-            }
+            // try{
+            //     const result = await LoginPost('http://122.205.70.147:8080/api/auth/login', fromData)
+            //     if (result) {
+            //         localStorage.setItem('accessToken', result.data.accessToken);
+            //         localStorage.setItem('userId', result.data.userId);
+            //         localStorage.setItem('username', result.data.username);
+            //         localStorage.setItem('image', result.data.avatarUrl);
+            //         successLogin(true);
+            //         onClose();
+            //     }
+            // } catch (error) {
+            //     alert('登录请求出错：' + error.message);
+            // }
+            successLogin(true);
             
         } else {
             alert('验证码错误');

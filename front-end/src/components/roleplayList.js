@@ -34,7 +34,7 @@ const RoleplayList = (props) => {
                 </div>
 
                 <div className="roleplayList-recommend-list-container">
-                    <RoleplayListSlide />
+                    <RoleplayListSlide  handleRoleplayCardClick={props.handleRoleplayCardClick}/>
                 </div>
             </div>
 
@@ -49,7 +49,7 @@ const RoleplayList = (props) => {
                 </div>
 
                 <div className="roleplayList-category-list-container">
-                    <RoleplayListSlide />
+                    <RoleplayListSlide  handleRoleplayCardClick={props.handleRoleplayCardClick}/>
                 </div>
             </div>
 

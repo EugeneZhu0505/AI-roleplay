@@ -1,0 +1,34 @@
+
+.roleplay-history-card-container{
+    width: 100%;
+    height: 50px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: start;
+    box-sizing: border-box;
+    background-color: transparent;
+    margin-bottom: 4px;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    margin-top:4px
+}
+
+.roleplay-history-card-container:hover{
+    background-color: #9e9d9dd3;
+}
+
+.roleplay-history-list-item-avatar{
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-left: 10px;
+}
+
+.roleplay-history-list-item-name{
+    font-size: 14px;
+    font-weight: 400;
+    color: #292929;
+    margin-left: 10px;
+}

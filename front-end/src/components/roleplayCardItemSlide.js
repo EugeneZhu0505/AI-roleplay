@@ -13,7 +13,7 @@ const images = [
     '7', 
 ];
 
-const RoleplayListSlide = () => {
+const RoleplayListSlide = (props) => {
     const itemsPerPage = 4;
     const [visibleItems, setVisibleItems] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -48,11 +48,13 @@ const RoleplayListSlide = () => {
             <div className="roleplayCardItem-slide">
                 {visibleItems.map((image, index) => (
                     <RoleplayCardItem roleplay={{
+                            key: image,
                             cover: 'https://characterai.io/i/200/static/avatars/uploaded/2023/11/29/LC67szCU6GtiPnevTnUdJ1N8UDhXQbEVxnG0R7tw4js.webp?webp=true&anim=0',
                             name: `角色${image}`,
                             builder: `构建者${image}`,
                             desc: '这是一个角色的描述',
                             likeCount: "10M",
+                            handleRoleplayCardClick: props.handleRoleplayCardClick,
                     }} />
                 ))}
             </div>
