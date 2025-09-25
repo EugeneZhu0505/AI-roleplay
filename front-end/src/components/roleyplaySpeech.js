@@ -55,6 +55,10 @@ const RoleplaySpeech = ({handleSpeechClick, roleplayDetailedInformation}) => {
                 </div>
 
                 <div>
+
+                </div>
+
+                <div className='roleplaySpeech-close-btn-container'>
                     <button className="roleplaySpeech-close-btn" onClick={closeSpeech}>
                         挂断
                     </button>

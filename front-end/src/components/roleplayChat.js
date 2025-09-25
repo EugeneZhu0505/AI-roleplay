@@ -4,14 +4,19 @@ import { createConversation, postRequest } from './utils/api';
 
 const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
 
-    // 保存当前对话的消息列表
     const [messages, setMessages] = useState([])
-
-    // 输入框状态
     const [input, setInput] = useState("");
-
     const messagesEndRef = useRef(null);
     
+
+    // 挂载时判断当前AI角色是否存在历史对话
+    useEffect(() => {
+        if (roleplayDetailedInformation.isHistory) {
+            
+        }
+    }, [roleplayDetailedInformation]);
+
+
     const handleInputChange = (value) => {
         setInput(value)
     };
