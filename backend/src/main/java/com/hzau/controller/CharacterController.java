@@ -125,4 +125,26 @@ public class CharacterController {
             return Result.fail(500, "创建角色失败");
         }
     }
+
+    /**
+     * 根据分类获取角色列表
+     */
+    @GetMapping("/category/{category}")
+    @Operation(summary = "按分类获取角色", description = "根据分类获取角色列表 (0-动漫, 1-影视, 2-历史, 3-科普)")
+    public Result<List<AiCharacter>> getCharactersByCategory(
+            @Parameter(description = "角色分类", required = true)
+            @PathVariable Integer category) {
+        try {
+            // 验证分类参数
+            if (category < 0 || category > 3) {
+                return Result.fail(400, "分类参数无效，必须是0-3之间的数字");
+            }
+            
+            List<AiCharacter> characters = characterService.getCharactersByCategory(category);
+            return Result.success(characters);
+        } catch (Exception e) {
+            log.error("按分类获取角色失败, category: {}", category, e);
+            return Result.fail(500, "按分类获取角色失败");
+        }
+    }
 }

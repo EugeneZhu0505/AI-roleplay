@@ -47,7 +47,8 @@ public class AuthController {
             // 注册用户
             User user = userService.registerUser(
                     userRegisterReq.getUsername(),
-                    userRegisterReq.getPassword()
+                    userRegisterReq.getPassword(),
+                    userRegisterReq.getAvatarUrl()
             );
 
             // 生成JWT token

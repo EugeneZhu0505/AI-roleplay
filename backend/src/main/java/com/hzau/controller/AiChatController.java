@@ -143,29 +143,30 @@ public class AiChatController {
 
         String message = request.getMessage();
         if (message == null || message.trim().isEmpty()) {
-            return Flux.just("data: " + "{\"error\":\"消息内容不能为空\"}\n\n");
+            return Flux.just("data: {\"error\":\"消息内容不能为空\"}\n\n");
         }
 
         if (!qiniuAiService.isConfigValid()) {
-            return Flux.just("data: " + "{\"error\":\"AI服务未正确配置，请检查API密钥\"}\n\n");
+            return Flux.just("data: {\"error\":\"AI服务未正确配置，请检查API密钥\"}\n\n");
         }
 
         log.info("流式单次对话请求: {}", message);
 
-        // 调用AI服务获取流式回复
-        Flux<String> aiStreamFlux = qiniuAiService.singleChatStream(message.trim());
-        
-        // 格式化每个数据块为SSE格式
-        Flux<String> formattedStreamFlux = aiStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
-        
-        // 添加结束标记
-        Flux<String> completeStreamFlux = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
-        
-        // 处理错误情况
-        return completeStreamFlux.onErrorResume(error -> {
-            log.error("流式对话失败", error);
-            return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
-        });
+        // 调用AI服务获取流式回复，直接返回处理后的内容
+        return qiniuAiService.singleChatStream(message.trim())
+                .map(content -> {
+                    // 如果内容不为空，格式化为SSE格式
+                    if (content != null && !content.trim().isEmpty()) {
+                        return "data: {\"content\":\"" + content.replace("\"", "\\\"") + "\"}\n\n";
+                    }
+                    return "";
+                })
+                .filter(data -> !data.isEmpty()) // 过滤空内容
+                .concatWith(Flux.just("data: [DONE]\n\n")) // 添加结束标记
+                .onErrorResume(error -> {
+                    log.error("流式对话失败", error);
+                    return Flux.just("data: {\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
+                });
     }
 
     /**
@@ -181,29 +182,30 @@ public class AiChatController {
 
         String message = request.getMessage();
         if (message == null || message.trim().isEmpty()) {
-            return Flux.just("data: " + "{\"error\":\"消息内容不能为空\"}\n\n");
+            return Flux.just("data: {\"error\":\"消息内容不能为空\"}\n\n");
         }
 
         if (!qiniuAiService.isConfigValid()) {
-            return Flux.just("data: " + "{\"error\":\"AI服务未正确配置，请检查API密钥\"}\n\n");
+            return Flux.just("data: {\"error\":\"AI服务未正确配置，请检查API密钥\"}\n\n");
         }
 
         log.info("流式多轮对话请求 [{}]: {}", conversationId, message);
 
-        // 调用AI服务获取流式回复
-        Flux<String> aiStreamFlux = qiniuAiService.multiTurnChatStream(conversationId, message.trim());
-        
-        // 格式化每个数据块为SSE格式
-        Flux<String> formattedStreamFlux = aiStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
-        
-        // 添加结束标记
-        Flux<String> completeStreamFlux = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
-        
-        // 处理错误情况
-        return completeStreamFlux.onErrorResume(error -> {
-            log.error("流式多轮对话失败", error);
-            return Flux.just("data: " + "{\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
-        });
+        // 调用AI服务获取流式回复，直接返回处理后的内容
+        return qiniuAiService.multiTurnChatStream(conversationId, message.trim())
+                .map(content -> {
+                    // 如果内容不为空，格式化为SSE格式
+                    if (content != null && !content.trim().isEmpty()) {
+                        return "data: {\"content\":\"" + content.replace("\"", "\\\"") + "\"}\n\n";
+                    }
+                    return "";
+                })
+                .filter(data -> !data.isEmpty()) // 过滤空内容
+                .concatWith(Flux.just("data: [DONE]\n\n")) // 添加结束标记
+                .onErrorResume(error -> {
+                    log.error("流式多轮对话失败", error);
+                    return Flux.just("data: {\"error\":\"AI服务调用失败，请稍后重试\"}\n\n");
+                });
     }
 
     /**

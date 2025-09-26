@@ -57,6 +57,10 @@ public class AiCharacter {
     @TableField("tags")
     private String tags;
 
+    @Schema(description = "角色分类", example = "0")
+    @TableField("category")
+    private Integer category;
+
     @Schema(description = "是否激活", example = "true")
     @TableField("is_active")
     private Boolean isActive;

@@ -2,6 +2,7 @@ package com.hzau.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * @projectName: AI-roleplay
@@ -21,8 +22,8 @@ public class UserChatReq {
     @Schema(description = "输入类型", required = true, example = "text", allowableValues = {"text", "audio"})
     private String inputType;
 
-    @Schema(description = "语音文件URL", required = false, example = "https://example.com/audio.mp3")
-    private String audioUrl;
+    @Schema(description = "音频文件", required = false)
+    private MultipartFile audioFile;
 
     @Schema(description = "音频格式", required = false, example = "mp3", allowableValues = {"mp3", "wav", "ogg", "raw"})
     private String audioFormat;

@@ -75,12 +75,13 @@ public class AiRoleplayService {
         }
 
         // 缓存未命中，生成开场白
-        return generateCharacterOpening(characterId)
+        Mono<String> openingMono = generateCharacterOpening(characterId)
                 .doOnSuccess(opening -> {
                     // 缓存开场白
                     redisTemplate.opsForValue().set(cacheKey, opening, OPENING_CACHE_EXPIRE, TimeUnit.SECONDS);
                     log.info("角色开场白已缓存, characterId: {}", characterId);
                 });
+        return openingMono;
     }
 
     /**
@@ -100,16 +101,16 @@ public class AiRoleplayService {
         String prompt = buildOpeningPrompt(character);
 
         // 获取并发控制许可
-        return concurrentControlService.acquirePermit("system", "llm")
-                .flatMap(permit -> qiniuAiService.singleChat(prompt)
-                        .doOnSuccess(opening -> {
-                            log.info("角色开场白生成成功, characterId: {}", characterId);
-                            concurrentControlService.releasePermit("system", "llm");
-                        })
-                        .doOnError(error -> {
-                            log.error("角色开场白生成失败, characterId: {}", characterId, error);
-                            concurrentControlService.releasePermit("system", "llm");
-                        }));
+        Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "llm");
+        return permitMono.flatMap(permit -> qiniuAiService.singleChat(prompt)
+                .doOnSuccess(opening -> {
+                    log.info("角色开场白生成成功, characterId: {}", characterId);
+                    concurrentControlService.releasePermit("system", "llm");
+                })
+                .doOnError(error -> {
+                    log.error("角色开场白生成失败, characterId: {}", characterId, error);
+                    concurrentControlService.releasePermit("system", "llm");
+                }));
     }
 
     /**
@@ -150,7 +151,7 @@ public class AiRoleplayService {
         Conversation conversation = conversationService.createConversation(userId, characterId, title);
 
         // 获取开场白
-        return getCharacterOpening(characterId)
+        Mono<ConversationWithOpening> resultMono = getCharacterOpening(characterId)
                 .map(opening -> {
                     // 保存开场白消息
                     messageService.saveCharacterMessage(conversation.getId(), opening);
@@ -158,6 +159,7 @@ public class AiRoleplayService {
                 })
                 .doOnSuccess(result -> log.info("新对话创建成功, conversationId: {}", conversation.getId()))
                 .doOnError(error -> log.error("新对话创建失败, userId: {}, characterId: {}", userId, characterId, error));
+        return resultMono;
     }
 
     /**
@@ -191,16 +193,17 @@ public class AiRoleplayService {
         messageService.saveUserMessage(conversationId, userMessage);
 
         // 构建对话上下文
-        return buildConversationContext(conversationId, character, userMessage)
-                .flatMap(context -> {
-                    // 获取并发控制许可
-                    return concurrentControlService.acquirePermit(userId.toString(), "llm")
-                            .flatMap(permit -> {
-                                // 调用AI API获取回复
-                                String contextKey = CONTEXT_CACHE_KEY + conversationId;
-                                return qiniuAiService.multiTurnChat(contextKey, context);
-                            });
-                })
+        Mono<String> contextMono = buildConversationContext(conversationId, character, userMessage);
+        Mono<String> chatMono = contextMono.flatMap(context -> {
+            // 获取并发控制许可
+            Mono<Boolean> permitMono = concurrentControlService.acquirePermit(userId.toString(), "llm");
+            return permitMono.flatMap(permit -> {
+                // 调用AI API获取回复
+                String contextKey = CONTEXT_CACHE_KEY + conversationId;
+                return qiniuAiService.multiTurnChat(contextKey, context);
+            });
+        });
+        Mono<String> resultMono = chatMono
                 .doOnSuccess(aiReply -> {
                     // 保存AI回复
                     messageService.saveCharacterMessage(conversationId, aiReply);
@@ -213,6 +216,7 @@ public class AiRoleplayService {
                     // 释放并发控制许可
                     concurrentControlService.releasePermit(userId.toString(), "llm");
                 });
+        return resultMono;
     }
 
     /**
@@ -288,10 +292,11 @@ public class AiRoleplayService {
         });
         
         // 处理最终错误
-        return contextProcessingFlux.onErrorResume(error -> {
+        Flux<String> finalFlux = contextProcessingFlux.onErrorResume(error -> {
             log.error("流式消息处理失败, conversationId: {}", conversationId, error);
             return Flux.error(error);
         });
+        return finalFlux;
     }
 
     /**
@@ -341,12 +346,14 @@ public class AiRoleplayService {
      * 发送语音消息并获取AI回复
      * @param userId 用户ID
      * @param conversationId 对话ID
-     * @param audioUrl 语音文件URL
+     * @param localAudioUrl 本地音频文件URL（用于数据库存储）
+     * @param ossAudioUrl OSS音频文件URL（用于语音转文本API调用）
      * @param audioFormat 音频格式
      * @return AI回复（包含文本和语音URL）
      */
-    public Mono<VoiceChatResponse> sendVoiceMessage(Integer userId, Long conversationId, String audioUrl, String audioFormat) {
-        log.info("发送语音消息, userId: {}, conversationId: {}, audioUrl: {}, audioFormat: {}", userId, conversationId, audioUrl, audioFormat);
+    public Mono<VoiceChatResponse> sendVoiceMessage(Integer userId, Long conversationId, String localAudioUrl, String ossAudioUrl, String audioFormat) {
+        log.info("发送语音消息, userId: {}, conversationId: {}, localAudioUrl: {}, ossAudioUrl: {}, audioFormat: {}", 
+                userId, conversationId, localAudioUrl, ossAudioUrl, audioFormat);
 
         // 验证对话是否属于用户
         if (!conversationService.isConversationOwnedByUser(conversationId, userId)) {
@@ -366,44 +373,46 @@ public class AiRoleplayService {
         }
 
         // 获取并发控制许可
-        return concurrentControlService.acquirePermit(userId.toString(), "llm")
+        Mono<VoiceChatResponse> resultMono = concurrentControlService.acquirePermit(userId.toString(), "llm")
                 .flatMap(permit -> {
-                    // 1. 语音转文本 - 使用本地文件上传到七牛云的方式
-                    return qiniuAudioService.speechToTextFromLocalFile(audioUrl, audioFormat)
-                            .flatMap(asrText -> {
-                                // 2. 保存用户消息（包含文本和语音URL）
-                                messageService.saveUserVoiceMessage(conversationId, asrText, audioUrl, null);
+                    // 1. 语音转文本 - 使用OSS URL进行语音转文本
+                    Mono<String> asrMono = qiniuAudioService.speechToTextFromOssUrl(ossAudioUrl, audioFormat);
+                    return asrMono.flatMap(asrText -> {
+                        // 2. 保存用户消息（使用本地URL存储到数据库）
+                        messageService.saveUserVoiceMessage(conversationId, asrText, localAudioUrl, null);
 
-                                // 3. 构建对话上下文并获取AI回复
-                                return buildConversationContext(conversationId, character, asrText)
-                                        .flatMap(context -> {
-                                            String contextKey = CONTEXT_CACHE_KEY + conversationId;
-                                            return qiniuAiService.multiTurnChat(contextKey, context);
-                                        })
-                                        .flatMap(aiReplyText -> {
-                                            // 4. 文本转语音
-                                            return qiniuAudioService.textToSpeech(aiReplyText)
-                                                    .flatMap(ttsBase64Data -> {
-                                                        try {
-                                                            // 5. 保存语音文件
-                                                            String audioFileUrl = fileStorageService.saveBase64AudioFile(
-                                                                    ttsBase64Data, "mp3");
-                                                            
-                                                            // 6. 保存AI回复消息（包含文本和语音URL）
-                                                            messageService.saveCharacterVoiceMessage(conversationId, 
-                                                                    aiReplyText, audioFileUrl, null);
+                        // 3. 构建对话上下文并获取AI回复
+                        Mono<String> contextMono = buildConversationContext(conversationId, character, asrText);
+                        Mono<String> aiReplyMono = contextMono.flatMap(context -> {
+                            String contextKey = CONTEXT_CACHE_KEY + conversationId;
+                            return qiniuAiService.multiTurnChat(contextKey, context);
+                        });
 
-                                                            // 7. 返回响应
-                                                            return Mono.just(new VoiceChatResponse(
-                                                                    asrText, aiReplyText, audioFileUrl));
+                        Mono<VoiceChatResponse> responseMono = aiReplyMono.flatMap(aiReplyText -> {
+                            // 4. 文本转语音
+                            Mono<String> ttsMono = qiniuAudioService.textToSpeech(aiReplyText);
+                            return ttsMono.flatMap(ttsBase64Data -> {
+                                try {
+                                    // 5. 保存语音文件
+                                    String audioFileUrl = fileStorageService.saveBase64AudioFile(
+                                            ttsBase64Data, "mp3");
 
-                                                        } catch (Exception e) {
-                                                            log.error("保存语音文件失败", e);
-                                                            return Mono.error(new RuntimeException("保存语音文件失败", e));
-                                                        }
-                                                    });
-                                        });
+                                    // 6. 保存AI回复消息（包含文本和语音URL）
+                                    messageService.saveCharacterVoiceMessage(conversationId,
+                                            aiReplyText, audioFileUrl, null);
+
+                                    // 7. 返回响应
+                                    return Mono.just(new VoiceChatResponse(
+                                            asrText, aiReplyText, audioFileUrl));
+                                } catch (Exception e) {
+                                    log.error("保存语音文件失败", e);
+                                    return Mono.error(new RuntimeException("保存语音文件失败", e));
+                                }
                             });
+                        });
+
+                        return responseMono;
+                    });
                 })
                 .doOnSuccess(response -> {
                     log.info("语音消息处理成功, conversationId: {}", conversationId);
@@ -415,6 +424,7 @@ public class AiRoleplayService {
                     // 释放并发控制许可
                     concurrentControlService.releasePermit(userId.toString(), "llm");
                 });
+        return resultMono;
     }
 
     /**

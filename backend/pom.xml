@@ -72,11 +72,11 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<!--spring  web-->
-		<dependency>
+		<!--spring  webflux - 已在下方引入，这里注释掉传统的web starter-->
+		<!-- <dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
+		</dependency> -->
 
 		<!-- jwt -->
 		<dependency>
@@ -121,10 +121,10 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- SpringDoc OpenAPI 3 -->
+		<!-- SpringDoc OpenAPI 3 for WebFlux -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
 			<version>2.2.0</version>
 		</dependency>
 

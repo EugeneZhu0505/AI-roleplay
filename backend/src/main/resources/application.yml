@@ -58,8 +58,9 @@ qiniu:
   kodo:
     access-key: ${QINIU_ACCESS_KEY:L16boMfLHL7lkh15huJ5MDc08vydJ0s5oj35xG_x}
     secret-key: ${QINIU_SECRET_KEY:jrNAFPTjDGHu4dpf8aaq1ZdKHZGaXKWki7U9eqrb}
-    bucket: ${QINIU_BUCKET:ai-roleplay-audio}
-    domain: ${QINIU_DOMAIN:t34w0mr3r.hd-bkt.clouddn.com}  # 七牛云CDN域名，用于生成公网访问URL
+    bucket: ${QINIU_BUCKET:airoleplay}
+    domain: ${QINIU_DOMAIN:t34w0mr3r.hd-bkt.clouddn.com}
+    # http://t34w0mr3r.hd-bkt.clouddn.com/audio/20250925_202419_acaa1425.mp3
 
 
 # MyBatis Plus配置
@@ -110,7 +111,7 @@ file:
     base-url: http://122.205.70.147
 
 
-# SpringDoc OpenAPI配置
+# SpringDoc OpenAPI配置 - WebFlux版本
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -120,11 +121,13 @@ springdoc:
     enabled: true
     config-url: /v3/api-docs/swagger-config
     url: /v3/api-docs
-    disable-swagger-default-url: true
-    use-root-path: true
+    disable-swagger-default-url: false
+    use-root-path: false
   show-actuator: true
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
+  webjars:
+    prefix: /webjars
 
 # 应用信息
 info:

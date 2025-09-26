@@ -6,8 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
@@ -16,7 +14,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 @MapperScan("com.hzau.mapper")
 @Slf4j
-public class BackendApplication extends SpringBootServletInitializer {
+public class BackendApplication {
 
 	private static String[] args;
 	private static ConfigurableApplicationContext context;
@@ -47,10 +45,5 @@ public class BackendApplication extends SpringBootServletInitializer {
 	public static void restart() {
 		context.close();
 		BackendApplication.context = SpringApplication.run(BackendApplication.class, args);
-	}
-
-	@Override
-	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-		return application.sources(BackendApplication.class);
 	}
 }

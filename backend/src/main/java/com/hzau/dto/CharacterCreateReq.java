@@ -51,6 +51,9 @@ public class CharacterCreateReq {
     @Size(max = 500, message = "标签长度不能超过500个字符")
     private String tags;
 
+    @Schema(description = "角色分类", example = "0")
+    private Integer category;
+
     @Schema(description = "是否激活", example = "true")
     private Boolean isActive = true;
 }

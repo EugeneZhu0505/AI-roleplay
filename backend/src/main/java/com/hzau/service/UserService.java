@@ -60,19 +60,20 @@ public class UserService extends ServiceImpl<UserMapper, User> {
      * 注册用户
      * @param username
      * @param password
+     * @param avatarUrl
      * @return
      */
-    public User registerUser(String username, String password) {
+    public User registerUser(String username, String password, String avatarUrl) {
         // 检查用户名是否已存在
         if (getUserByUsername(username) != null) {
             throw new RuntimeException("用户名已存在");
         }
 
-
         // 创建新用户
         User user = new User();
         user.setUsername(username);
         user.setPasswordHash(encodePassword(password));
+        user.setAvatarUrl(avatarUrl);
 
         // 保存用户
         this.save(user);

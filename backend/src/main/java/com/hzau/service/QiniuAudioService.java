@@ -70,18 +70,19 @@ public class QiniuAudioService {
                 .build();
     }
 
+
     /**
-     * 语音转文本 (ASR) - 支持本地文件上传到七牛云
-     * @param localAudioPath 本地音频文件路径
+     * 语音转文本 (ASR) - 直接使用OSS URL
+     * @param ossAudioUrl OSS音频文件URL
      * @param audioFormat 音频格式
      * @return 识别出的文本
      */
-    public Mono<String> speechToTextFromLocalFile(String localAudioPath, String audioFormat) {
-        log.info("开始语音转文本（本地文件）, localPath: {}, format: {}", localAudioPath, audioFormat);
+    public Mono<String> speechToTextFromOssUrl(String ossAudioUrl, String audioFormat) {
+        log.info("开始语音转文本（OSS URL）, ossUrl: {}, format: {}", ossAudioUrl, audioFormat);
         
         // 验证输入参数
-        if (localAudioPath == null || localAudioPath.trim().isEmpty()) {
-            return Mono.error(new RuntimeException("本地音频文件路径不能为空"));
+        if (ossAudioUrl == null || ossAudioUrl.trim().isEmpty()) {
+            return Mono.error(new RuntimeException("OSS音频URL不能为空"));
         }
         
         if (audioFormat == null || audioFormat.trim().isEmpty()) {
@@ -93,19 +94,8 @@ public class QiniuAudioService {
             return Mono.error(new RuntimeException("七牛云API配置无效"));
         }
 
-        // 上传文件到七牛云并获取公网URL
-        return Mono.fromCallable(() -> {
-            try {
-                String publicUrl = qiniuUploadService.uploadFile(localAudioPath);
-                log.info("音频文件上传成功，公网URL: {}", publicUrl);
-                return publicUrl;
-            } catch (Exception e) {
-                log.error("上传音频文件到七牛云失败", e);
-                throw new RuntimeException("上传音频文件失败: " + e.getMessage());
-            }
-        })
-        .subscribeOn(Schedulers.boundedElastic())
-        .flatMap(publicUrl -> speechToText(publicUrl, audioFormat));
+        // 直接使用OSS URL进行语音转文本
+        return speechToText(ossAudioUrl, audioFormat);
     }
 
     /**
@@ -258,72 +248,88 @@ public class QiniuAudioService {
         );
         
         // 处理错误映射
-        return errorLogHandlerMono.onErrorMap(error -> 
+        return errorLogHandlerMono.onErrorMap(error ->
                 new RuntimeException("获取音色列表失败: " + error.getMessage(), error)
         );
-    }
+     }
 
-    /**
-     * 发送ASR请求到七牛云API
-     */
-    private Mono<AudioAsrRes> sendAsrRequest(AudioAsrReq request) {
-        String endpoint = config.getPrimaryEndpoint() + "/voice/asr";
-        
-        return webClient.post()
-                .uri(endpoint)
-                .header("Authorization", "Bearer " + config.getApiKey())
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(AudioAsrRes.class)
-                .timeout(Duration.ofSeconds(config.getTimeout())) // 使用全局超时配置
-                .doOnError(WebClientResponseException.class, ex -> {
-                    log.error("ASR请求失败，HTTP状态码: {}, 响应体: {}", 
-                            ex.getStatusCode(), ex.getResponseBodyAsString());
-                })
-                .doOnError(error -> !(error instanceof WebClientResponseException), error -> {
-                    log.error("ASR请求发生其他错误", error);
-                })
-                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(2))
-                        .filter(throwable -> !(throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is4xxClientError()))
-                        .doBeforeRetry(retrySignal -> {
-                            log.warn("ASR请求重试，第{}次，原因: {}", 
-                                    retrySignal.totalRetries() + 1, 
-                                    retrySignal.failure().getMessage());
-                        }));
-    }
+     /**
+      * 发送ASR请求到七牛云API
+      */
+     private Mono<AudioAsrRes> sendAsrRequest(AudioAsrReq request) {
+         String endpoint = config.getPrimaryEndpoint() + "/voice/asr";
+     
+         Mono<AudioAsrRes> requestMono = webClient.post()
+                 .uri(endpoint)
+                 .header("Authorization", "Bearer " + config.getApiKey())
+                 .bodyValue(request)
+                 .retrieve()
+                 .bodyToMono(AudioAsrRes.class);
+     
+         Mono<AudioAsrRes> timeoutMono = requestMono.timeout(Duration.ofSeconds(config.getTimeout()));
+     
+         Mono<AudioAsrRes> httpErrorLogMono = timeoutMono.doOnError(WebClientResponseException.class, ex -> {
+             log.error("ASR请求失败，HTTP状态码: {}, 响应体: {}",
+                     ex.getStatusCode(), ex.getResponseBodyAsString());
+         });
+     
+         Mono<AudioAsrRes> otherErrorLogMono = httpErrorLogMono.doOnError(error -> !(error instanceof WebClientResponseException), error -> {
+             log.error("ASR请求发生其他错误", error);
+         });
+     
+         Mono<AudioAsrRes> finalMono = otherErrorLogMono.retryWhen(
+                 Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(2))
+                         .filter(throwable -> !(throwable instanceof WebClientResponseException &&
+                                 ((WebClientResponseException) throwable).getStatusCode().is4xxClientError()))
+                         .doBeforeRetry(retrySignal -> {
+                             log.warn("ASR请求重试，第{}次，原因: {}",
+                                     retrySignal.totalRetries() + 1,
+                                     retrySignal.failure().getMessage());
+                         })
+             );
+     
+         return finalMono;
+     }
 
-    /**
-     * 发送TTS请求
-     * @param request TTS请求
-     * @return TTS响应
-     */
-    private Mono<AudioTtsRes> sendTtsRequest(AudioTtsReq request) {
-        String endpoint = config.getPrimaryEndpoint() + "/voice/tts";
-        
-        return webClient.post()
-                .uri(endpoint)
-                .header("Authorization", "Bearer " + config.getApiKey())
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(AudioTtsRes.class)
-                .timeout(Duration.ofSeconds(config.getTimeout()))
-                .doOnError(WebClientResponseException.class, ex -> {
-                    log.error("TTS请求失败，HTTP状态码: {}, 响应体: {}", 
-                            ex.getStatusCode(), ex.getResponseBodyAsString());
-                })
-                .doOnError(error -> !(error instanceof WebClientResponseException), error -> {
-                    log.error("TTS请求发生其他错误", error);
-                })
-                .retryWhen(Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(2))
-                        .filter(throwable -> !(throwable instanceof WebClientResponseException &&
-                                ((WebClientResponseException) throwable).getStatusCode().is4xxClientError()))
-                        .doBeforeRetry(retrySignal -> {
-                            log.warn("TTS请求重试，第{}次，原因: {}", 
-                                    retrySignal.totalRetries() + 1, 
-                                    retrySignal.failure().getMessage());
-                        }));
-    }
+     /**
+      * 发送TTS请求
+      * @param request TTS请求
+      * @return TTS响应
+      */
+     private Mono<AudioTtsRes> sendTtsRequest(AudioTtsReq request) {
+         String endpoint = config.getPrimaryEndpoint() + "/voice/tts";
+     
+         Mono<AudioTtsRes> requestMono = webClient.post()
+                 .uri(endpoint)
+                 .header("Authorization", "Bearer " + config.getApiKey())
+                 .bodyValue(request)
+                 .retrieve()
+                 .bodyToMono(AudioTtsRes.class);
+     
+         Mono<AudioTtsRes> timeoutMono = requestMono.timeout(Duration.ofSeconds(config.getTimeout()));
+     
+         Mono<AudioTtsRes> httpErrorLogMono = timeoutMono.doOnError(WebClientResponseException.class, ex -> {
+             log.error("TTS请求失败，HTTP状态码: {}, 响应体: {}",
+                     ex.getStatusCode(), ex.getResponseBodyAsString());
+         });
+     
+         Mono<AudioTtsRes> otherErrorLogMono = httpErrorLogMono.doOnError(error -> !(error instanceof WebClientResponseException), error -> {
+             log.error("TTS请求发生其他错误", error);
+         });
+     
+         Mono<AudioTtsRes> finalMono = otherErrorLogMono.retryWhen(
+                 Retry.backoff(config.getMaxRetries(), Duration.ofSeconds(2))
+                         .filter(throwable -> !(throwable instanceof WebClientResponseException &&
+                                 ((WebClientResponseException) throwable).getStatusCode().is4xxClientError()))
+                         .doBeforeRetry(retrySignal -> {
+                             log.warn("TTS请求重试，第{}次，原因: {}",
+                                     retrySignal.totalRetries() + 1,
+                                     retrySignal.failure().getMessage());
+                         })
+             );
+     
+         return finalMono;
+     }
 
     /**
      * 从ASR响应中提取文本

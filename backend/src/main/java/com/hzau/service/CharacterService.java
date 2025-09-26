@@ -146,5 +146,19 @@ public class CharacterService extends ServiceImpl<CharacterMapper, AiCharacter> 
         log.info("AI角色创建成功, characterId: {}, name: {}", character.getId(), character.getName());
         return character;
     }
+
+    /**
+     * 根据分类获取角色列表
+     * @param category 角色分类 (0-动漫, 1-影视, 2-历史, 3-科普)
+     * @return 匹配的角色列表
+     */
+    public List<AiCharacter> getCharactersByCategory(Integer category) {
+        log.info("根据分类获取角色列表, category: {}", category);
+        QueryWrapper<AiCharacter> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("category", category)
+                .eq("is_active", true)
+                .orderBy(true, true, "created_at");
+        return this.list(queryWrapper);
+    }
 }
 

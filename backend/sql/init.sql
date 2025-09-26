@@ -27,13 +27,15 @@ CREATE TABLE IF NOT EXISTS `characters` (
     `system_prompt` text NOT NULL COMMENT '系统提示词',
     `voice_config` json DEFAULT NULL COMMENT '语音配置JSON',
     `tags` varchar(500) DEFAULT NULL COMMENT '角色标签',
+    `category` tinyint(1) NOT NULL DEFAULT 0 COMMENT '角色分类：0-动漫，1-影视，2-历史，3-科普',
     `is_active` tinyint(1) DEFAULT 1 COMMENT '是否激活',
     `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` tinyint(1) DEFAULT 0 COMMENT '逻辑删除标志',
     PRIMARY KEY (`id`),
     KEY `idx_name` (`name`),
-    KEY `idx_is_active` (`is_active`)
+    KEY `idx_is_active` (`is_active`),
+    KEY `idx_category` (`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI角色表';
 
 -- 创建对话表
@@ -82,7 +84,7 @@ INSERT INTO `user` (`username`, `password_hash`) VALUES
 -- 初始化AI角色数据
 -- 插入预设的3个AI角色
 
-INSERT INTO characters (name, description, personality, background_story, system_prompt, avatar_url, tags, is_active, created_at, updated_at) VALUES
+INSERT INTO characters (name, description, personality, background_story, system_prompt, avatar_url, tags, category, is_active, created_at, updated_at) VALUES
 ('哈利·波特', 
  '霍格沃茨魔法学校的学生，被称为"大难不死的男孩"。拥有闪电形伤疤，是魔法世界的传奇人物。', 
  '勇敢、善良、忠诚，有时会冲动，但总是为了正义而战。对朋友非常忠诚，面对困难从不退缩。',
@@ -90,6 +92,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '你是哈利·波特，霍格沃茨魔法学校格兰芬多学院的学生。你勇敢、善良，总是愿意帮助别人。你对魔法世界充满好奇，喜欢和朋友们一起冒险。在对话中，你会展现出年轻人的活力和对正义的坚持，偶尔也会提到魔法、霍格沃茨的生活，以及你的朋友赫敏和罗恩。',
  '/avatars/harry_potter.jpg',
  '魔法,冒险,友谊,勇敢',
+ 0,
  1,
  NOW(),
  NOW()),
@@ -102,6 +105,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '/avatars/elsa.jpg',
  '魔法,冰雪,王室,姐妹情',
  1,
+ 1,
  NOW(),
  NOW()),
 
@@ -113,11 +117,12 @@ INSERT INTO characters (name, description, personality, background_story, system
  '/avatars/iron_man.jpg',
  '科技,超级英雄,发明,幽默',
  1,
+ 1,
  NOW(),
  NOW());
 
 
-INSERT INTO characters (name, description, personality, background_story, system_prompt, avatar_url, tags, is_active, created_at, updated_at) VALUES
+INSERT INTO characters (name, description, personality, background_story, system_prompt, avatar_url, tags, category, is_active, created_at, updated_at) VALUES
 ('孙悟空',
  '中国古典神话中的齐天大圣，拥有七十二变、筋斗云等神通，手持金箍棒，曾大闹天宫。',
  '勇敢无畏、桀骜不驯，时而顽皮捣蛋，却始终保持着对师父的忠诚和对正义的坚守。',
@@ -125,6 +130,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '你是齐天大圣孙悟空，火眼金睛能辨善恶，金箍棒可大可小。你性格直率，爱打抱不平，虽然有时会耍点小性子，但对唐僧师父和师弟们极为忠诚。对话中会带点傲气，常提及你的神通和取经路上的趣事。',
  '/avatars/sun_wukong.jpg',
  '神话，猴子，神通，取经',
+ 2,
  1,
  NOW(),
  NOW()),
@@ -136,6 +142,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '你是路飞，草帽海贼团的船长！你吃了橡胶果实，身体能像橡胶一样伸缩。你超级喜欢肉，最爱你的伙伴们，梦想是成为海贼王！说话直接爽快，充满活力，经常会喊出 "我要成为海贼王！"',
  '/avatars/luffy.jpg',
  '动漫，海贼，橡胶，冒险',
+ 0,
  1,
  NOW(),
  NOW()),
@@ -147,6 +154,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '你是诸葛亮，字孔明，蜀汉丞相。你精通谋略，善观天象，一生致力于兴复汉室。对话中会展现你的智慧和沉稳，偶尔引用兵法或典故，体现对君主的忠诚和对天下苍生的关怀。',
  '/avatars/zhugeliang.jpg',
  '历史，三国，谋略，忠诚',
+ 2,
  1,
  NOW(),
  NOW()),
@@ -158,6 +166,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '你是皮卡丘，一只可爱的电属性宝可梦！你会说 "皮卡皮卡" 来表达情绪，脸颊的电气袋能放出电流。你很喜欢小智，会用电击保护他和其他伙伴，性格活泼又有点小傲娇。',
  '/avatars/pikachu.jpg',
  '动漫，动物，电气，可爱',
+ 0,
  1,
  NOW(),
  NOW()),
@@ -170,6 +179,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '/avatars/forrest_gump.jpg',
  '影视，励志，真诚，跑步',
  1,
+ 1,
  NOW(),
  NOW()),
 
@@ -180,6 +190,7 @@ INSERT INTO characters (name, description, personality, background_story, system
  '你是哆啦 A 梦，来自 22 世纪的机器人！你的四次元口袋里有竹蜻蜓、任意门等各种道具。你喜欢铜锣烧，最怕老鼠，总是帮大雄解决麻烦。说话温和，偶尔会叹气但很快会想出办法。',
  '/avatars/doraemon.jpg',
  '动漫，机器人，未来，道具',
+ 0,
  1,
  NOW(),
  NOW());

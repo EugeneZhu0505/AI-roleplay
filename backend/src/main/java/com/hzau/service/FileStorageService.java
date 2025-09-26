@@ -84,6 +84,36 @@ public class FileStorageService {
     }
 
     /**
+     * 保存音频字节数组到本地
+     */
+    public String saveAudioBytes(byte[] audioBytes, String originalFilename) throws IOException {
+        if (audioBytes == null || audioBytes.length == 0) {
+            throw new RuntimeException("音频数据为空");
+        }
+        
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new RuntimeException("文件名为空");
+        }
+
+        // 生成文件名和路径
+        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+        String fileName = generateUniqueFileName() + fileExtension;
+        String uploadDir = createUploadDirectory("audio");
+        String filePath = uploadDir + File.separator + fileName;
+
+        // 保存文件
+        File targetFile = new File(filePath);
+        Files.write(targetFile.toPath(), audioBytes);
+
+        // 生成访问URL
+        String fileUrl = generateFileUrl("audio", fileName);
+
+        log.info("音频字节数组保存成功: {} -> {} (大小: {} bytes)", originalFilename, fileUrl, audioBytes.length);
+        return fileUrl;
+    }
+
+
+    /**
      * 上传音频文件
      */
     public String uploadAudioFile(MultipartFile file) throws IOException {

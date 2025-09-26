@@ -49,11 +49,11 @@ public class CharacterOpeningInitializer {
                 }
 
                 // 使用响应式编程批量预生成开场白
-                Flux.fromIterable(activeCharacters)
+                Flux<String> voiceInitFlux = Flux.fromIterable(activeCharacters)
                         .delayElements(Duration.ofSeconds(3)) // 增加间隔到3秒，避免并发控制冲突
                         .flatMap(character -> {
                             log.info("预生成角色开场白: {} (ID: {})", character.getName(), character.getId());
-                            return aiRoleplayService.getCharacterOpening(character.getId())
+                            Mono<String> openingMono = aiRoleplayService.getCharacterOpening(character.getId())
                                     .timeout(Duration.ofSeconds(30)) // 添加超时控制
                                     .doOnSuccess(opening -> log.info("角色 {} 开场白预生成成功", character.getName()))
                                     .doOnError(error -> log.error("角色 {} 开场白预生成失败: {}", character.getName(), error.getMessage()))
@@ -61,14 +61,15 @@ public class CharacterOpeningInitializer {
                                         // 出错时返回空，继续处理下一个角色
                                         return Mono.empty();
                                     });
-                        }, 1) // 限制并发数为1，避免同时发起多个AI请求
-                        .collectList()
+                            return openingMono;
+                        }, 1); // 限制并发数为1，避免同时发起多个AI请求
+                Mono<List<String>> finalResultMono = voiceInitFlux.collectList()
                         .doOnSuccess(results -> {
                             long successCount = results.stream().filter(result -> result != null && !result.isEmpty()).count();
                             log.info("角色开场白预生成完成，成功: {}/{}", successCount, activeCharacters.size());
                         })
-                        .doOnError(error -> log.error("角色开场白预生成过程中发生错误", error))
-                        .subscribe();
+                        .doOnError(error -> log.error("角色开场白预生成过程中发生错误", error));
+                finalResultMono.subscribe();
 
             } catch (Exception e) {
                 log.error("预生成角色开场白失败", e);

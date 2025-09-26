@@ -4,26 +4,32 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hzau.common.Result;
 import com.hzau.common.constants.ErrorCode;
 import com.hzau.service.RateLimitService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @projectName: AI-roleplay
  * @package: com.hzau.interceptor
- * @className: RateLimitIntercepter
+ * @className: RateLimitInterceptor
  * @author: zhuyuchen
- * @description: TODO
+ * @description: WebFlux 限流过滤器
  * @date: 2025/9/23 下午3:15
  */
 @Slf4j
 @Component
-public class RateLimitInterceptor implements HandlerInterceptor {
+public class RateLimitInterceptor implements WebFilter {
 
     @Autowired
     private RateLimitService rateLimitService;
@@ -32,15 +38,17 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private ObjectMapper objectMapper;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+        String requestURI = request.getURI().getPath();
+        
         // 只对AI相关接口进行限流
-        String requestURI = request.getRequestURI();
         if (!shouldApplyRateLimit(requestURI)) {
-            return true;
+            return chain.filter(exchange);
         }
 
-        // 获取用户ID（从请求参数或JWT token中获取）
-        Integer userId = getUserIdFromRequest(request);
+        // 获取用户ID（从请求参数或exchange attributes中获取）
+        Integer userId = getUserIdFromRequest(request, exchange);
         String clientIp = getClientIpAddress(request);
 
         boolean allowed = false;
@@ -61,12 +69,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
                     limitType, requestURI, userId, clientIp);
 
             // 返回限流错误响应
-            writeRateLimitResponse(response);
-            return false;
+            return writeRateLimitResponse(exchange.getResponse());
         }
 
         log.debug("请求通过限流检查, URI: {}, userId: {}, IP: {}", requestURI, userId, clientIp);
-        return true;
+        return chain.filter(exchange);
     }
 
     /**
@@ -83,11 +90,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     /**
      * 从请求中获取用户ID
      * @param request HTTP请求
+     * @param exchange ServerWebExchange
      * @return 用户ID，如果获取不到返回null
      */
-    private Integer getUserIdFromRequest(HttpServletRequest request) {
+    private Integer getUserIdFromRequest(ServerHttpRequest request, ServerWebExchange exchange) {
         // 从请求参数中获取用户ID
-        String userIdParam = request.getParameter("userId");
+        String userIdParam = request.getQueryParams().getFirst("userId");
         if (userIdParam != null && !userIdParam.trim().isEmpty()) {
             try {
                 return Integer.parseInt(userIdParam);
@@ -96,8 +104,13 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             }
         }
 
-        // TODO: 从JWT token中获取用户ID
-        // 这里可以添加从JWT token中解析用户ID的逻辑
+        // 从exchange attributes中获取用户ID（由JwtAuthenticationFilter设置）
+        Object userIdAttr = exchange.getAttribute("userId");
+        if (userIdAttr instanceof Long) {
+            return ((Long) userIdAttr).intValue();
+        } else if (userIdAttr instanceof Integer) {
+            return (Integer) userIdAttr;
+        }
 
         return null;
     }
@@ -107,34 +120,40 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      * @param request HTTP请求
      * @return 客户端IP地址
      */
-    private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
+    private String getClientIpAddress(ServerHttpRequest request) {
+        String xForwardedFor = request.getHeaders().getFirst("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
             return xForwardedFor.split(",")[0].trim();
         }
 
-        String xRealIp = request.getHeader("X-Real-IP");
+        String xRealIp = request.getHeaders().getFirst("X-Real-IP");
         if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
             return xRealIp;
         }
 
-        return request.getRemoteAddr();
+        return request.getRemoteAddress() != null ? 
+               request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
     }
 
     /**
      * 写入限流错误响应
      * @param response HTTP响应
-     * @throws IOException IO异常
+     * @return Mono<Void>
      */
-    private void writeRateLimitResponse(HttpServletResponse response) throws IOException {
-        response.setStatus(HttpServletResponse.SC_GATEWAY_TIMEOUT);
-        response.setContentType("application/json;charset=UTF-8");
+    private Mono<Void> writeRateLimitResponse(ServerHttpResponse response) {
+        response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+        response.getHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
 
-        Result<String> result = Result.fail(ErrorCode.ERROR100.getCode(), "请求过于频繁，请稍后再试");
-        String jsonResponse = objectMapper.writeValueAsString(result);
-
-        response.getWriter().write(jsonResponse);
-        response.getWriter().flush();
+        try {
+            Result<String> result = Result.fail(ErrorCode.ERROR100.getCode(), "请求过于频繁，请稍后再试");
+            String jsonResponse = objectMapper.writeValueAsString(result);
+            
+            DataBuffer buffer = response.bufferFactory().wrap(jsonResponse.getBytes(StandardCharsets.UTF_8));
+            return response.writeWith(Mono.just(buffer));
+        } catch (Exception e) {
+            log.error("写入限流响应失败", e);
+            return response.setComplete();
+        }
     }
 }
 

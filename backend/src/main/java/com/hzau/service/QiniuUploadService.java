@@ -15,6 +15,8 @@ import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 /**
  * @projectName: AI-roleplay
@@ -45,6 +47,46 @@ public class QiniuUploadService {
         this.auth = Auth.create(config.getAccessKey(), config.getSecretKey());
 
         log.info("七牛云上传服务初始化完成");
+    }
+
+    /**
+     * 上传MultipartFile到七牛云
+     * @param file MultipartFile文件
+     * @return 七牛云公网访问URL
+     */
+    public String uploadFile(MultipartFile file) throws IOException {
+        if (!config.isConfigValid()) {
+            throw new RuntimeException("七牛云配置无效，请检查配置信息");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("文件为空");
+        }
+
+        try {
+            // 生成唯一的文件名
+            String fileName = generateFileName(file.getOriginalFilename());
+
+            // 生成上传凭证
+            String upToken = auth.uploadToken(config.getBucket());
+
+            // 执行上传 - 直接使用字节数组上传
+            Response response = uploadManager.put(file.getBytes(), fileName, upToken);
+
+            if (response.isOK()) {
+                // 生成公网访问URL
+                String publicUrl = generatePublicUrl(fileName);
+                log.info("MultipartFile上传成功: {} -> {}", file.getOriginalFilename(), publicUrl);
+                return publicUrl;
+            } else {
+                log.error("MultipartFile上传失败: {}, 响应: {}", file.getOriginalFilename(), response.bodyString());
+                throw new RuntimeException("MultipartFile上传失败: " + response.bodyString());
+            }
+
+        } catch (QiniuException e) {
+            log.error("七牛云上传异常: {}", file.getOriginalFilename(), e);
+            throw new RuntimeException("七牛云上传异常: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -185,12 +227,14 @@ public class QiniuUploadService {
     private String generatePublicUrl(String fileName) {
         String domain = config.getDomain();
         if (!domain.startsWith("http://") && !domain.startsWith("https://")) {
-            domain = "https://" + domain;
+            domain = "http://" + domain;  // 使用http协议而不是https
         }
         if (domain.endsWith("/")) {
             domain = domain.substring(0, domain.length() - 1);
         }
-        return domain + "/" + fileName;
+        String publicUrl = domain + "/" + fileName;
+        log.info("生成公网访问URL: {}", publicUrl);
+        return publicUrl;
     }
 
     /**

@@ -85,34 +85,33 @@ public class QiniuAiService {
      * @return AI回复
      */
     public Mono<String> singleChat(String message, String model) {
-        // 获取并发控制许可
-        return concurrentControlService.acquirePermit("system", "llm")
-                .flatMap(permit -> {
-                    List<MessageContent> messages = List.of(MessageContent.user(message));
+        Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "llm");
 
-                    LlmChatReq request = LlmChatReq.builder()
-                            .model(model)
-                            .messages(messages)
-                            .stream(false)
-                            .temperature(0.7)
-                            .maxTokens(2000)
-                            .build();
+        List<MessageContent> messages = List.of(MessageContent.user(message));
+        LlmChatReq request = LlmChatReq.builder()
+                .model(model)
+                .messages(messages)
+                .stream(false)
+                .temperature(0.7)
+                .maxTokens(2000)
+                .build();
 
-                    return sendChatReq(request)
-                            .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
-                            .map(this::extractMessageContent)
-                            .doOnSuccess(result -> {
-                                concurrentControlService.releasePermit("system", "llm");
-                            })
-                            .doOnError(error -> {
-                                log.error("单次对话失败", error);
-                                concurrentControlService.releasePermit("system", "llm");
-                            });
-                })
+        Mono<String> resultMono = sendChatReq(request)
+                .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
+                .map(this::extractMessageContent)
+                .doOnSuccess(res -> concurrentControlService.releasePermit("system", "llm"))
+                .doOnError(error -> {
+                    log.error("单次对话失败", error);
+                    concurrentControlService.releasePermit("system", "llm");
+                });
+
+        Mono<String> finalMono = permitMono.flatMap(permit -> resultMono)
                 .onErrorResume(error -> {
                     log.error("获取并发许可失败", error);
                     return Mono.error(new RuntimeException("系统繁忙，请稍后重试"));
                 });
+
+        return finalMono;
     }
 
     /**
@@ -189,10 +188,12 @@ public class QiniuAiService {
         });
         
         // 处理许可获取失败
-        return errorHandlerMono.onErrorResume(error -> {
+        Mono<String> finalMono = errorHandlerMono.onErrorResume(error -> {
             log.error("获取并发许可失败", error);
             return Mono.error(new RuntimeException("系统繁忙，请稍后重试"));
         });
+        
+        return finalMono;
     }
 
     /**
@@ -250,7 +251,38 @@ public class QiniuAiService {
             throw new RuntimeException("AI响应内容为空");
         }
 
-        return choice.getMessage().getContent();
+        String originalContent = choice.getMessage().getContent();
+        return filterActionAndThoughts(originalContent);
+    }
+
+    /**
+     * 过滤AI回复中的内心戏和动作描述
+     * @param content 原始内容
+     * @return 过滤后的纯对话内容
+     */
+    private String filterActionAndThoughts(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return content;
+        }
+        
+        // 移除括号内的内容（包括中文括号和英文括号）
+        String filtered = content.replaceAll("\\([^)]*\\)", "")  // 英文括号
+                                .replaceAll("（[^）]*）", "")      // 中文括号
+                                .replaceAll("\\[[^\\]]*\\]", "")  // 方括号
+                                .replaceAll("【[^】]*】", "");     // 中文方括号
+        
+        // 移除多余的空白字符和换行
+        filtered = filtered.replaceAll("\\s+", " ")  // 多个空格替换为单个空格
+                          .replaceAll("\\n\\s*\\n", "\n")  // 多个换行替换为单个换行
+                          .trim();
+        
+        // 如果过滤后内容为空，返回原内容（避免完全没有回复）
+        if (filtered.trim().isEmpty()) {
+            log.warn("过滤后内容为空，返回原内容");
+            return content;
+        }
+        
+        return filtered;
     }
 
     /**
@@ -269,33 +301,34 @@ public class QiniuAiService {
      * @return AI回复流
      */
     public Flux<String> singleChatStream(String message, String model) {
-        // 获取流式并发控制许可
-        return concurrentControlService.acquirePermit("system", "streaming")
-                .flatMapMany(permit -> {
-                    List<MessageContent> messages = List.of(MessageContent.user(message));
+        // 使用局部变量分步构建，避免在 return 中出现长链式调用
+        Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "streaming");
 
-                    LlmChatReq request = LlmChatReq.builder()
-                            .model(model)
-                            .messages(messages)
-                            .stream(true) // 启用流式输出
-                            .temperature(0.7)
-                            .maxTokens(2000)
-                            .build();
+        List<MessageContent> messages = List.of(MessageContent.user(message));
+        LlmChatReq request = LlmChatReq.builder()
+                .model(model)
+                .messages(messages)
+                .stream(true) // 启用流式输出
+                .temperature(0.7)
+                .maxTokens(2000)
+                .build();
 
-                    return sendChatStreamReq(request)
-                            .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
-                            .doOnComplete(() -> {
-                                concurrentControlService.releasePermit("system", "streaming");
-                            })
-                            .doOnError(error -> {
-                                log.error("流式单次对话失败", error);
-                                concurrentControlService.releasePermit("system", "streaming");
-                            });
-                })
-                .onErrorResume(error -> {
-                    log.error("获取流式并发许可失败", error);
-                    return Flux.error(new RuntimeException("系统繁忙，请稍后重试"));
-                });
+        Flux<String> streamFlux = permitMono.flatMapMany(permit ->
+                sendChatStreamReq(request)
+                        .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
+                        .doOnComplete(() -> {
+                            concurrentControlService.releasePermit("system", "streaming");
+                        })
+                        .doOnError(error -> {
+                            log.error("流式单次对话失败", error);
+                            concurrentControlService.releasePermit("system", "streaming");
+                        })
+        ).onErrorResume(error -> {
+            log.error("获取流式并发许可失败", error);
+            return Flux.error(new RuntimeException("系统繁忙，请稍后重试"));
+        });
+
+        return streamFlux;
     }
 
     /**
@@ -325,7 +358,7 @@ public class QiniuAiService {
         }).subscribeOn(Schedulers.fromExecutor(sessionManagementExecutor));
         
         // 发送流式聊天请求并处理响应
-        return historyMono.flatMapMany(history -> {
+        Flux<String> resultFlux = historyMono.flatMapMany(history -> {
             LlmChatReq request = LlmChatReq.builder()
                     .model(model)
                     .messages(history)
@@ -336,52 +369,37 @@ public class QiniuAiService {
 
             StringBuilder responseBuilder = new StringBuilder();
             
-            // 发送流式请求
-            Flux<String> streamRequestFlux = sendChatStreamReq(request)
-                    .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor));
-            
-            // 处理每个数据块
-            Flux<String> processedStreamFlux = streamRequestFlux.doOnNext(chunk -> {
-                // 累积响应内容
-                try {
-                    // 解析流式响应中的内容
-                    if (chunk.startsWith("{") && chunk.contains("\"content\"")) {
-                        // 简单的JSON解析，实际项目中建议使用Jackson
-                        String content = extractContentFromStreamChunk(chunk);
-                        if (content != null && !content.isEmpty()) {
-                            responseBuilder.append(content);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("解析流式响应块失败: {}", chunk, e);
-                }
-            });
-            
-            // 处理流式响应完成事件
-            Flux<String> streamWithCompleteHandler = processedStreamFlux.doOnComplete(() -> {
-                // 流式响应完成后，在消息处理线程池中将完整回复添加到历史
-                Mono.fromRunnable(() -> {
-                    String fullResponse = responseBuilder.toString();
-                    if (!fullResponse.isEmpty()) {
-                        List<MessageContent> currentHistory = conversationHistory.get(conversationId);
-                        if (currentHistory != null) {
-                            currentHistory.add(MessageContent.assistant(fullResponse));
-                            // 限制历史长度，避免token过多
-                            if (currentHistory.size() > 20) {
-                                currentHistory.subList(0, currentHistory.size() - 20).clear();
+            // 发送流式请求，现在直接返回内容
+            return sendChatStreamReq(request)
+                    .subscribeOn(Schedulers.fromExecutor(llmRequestExecutor))
+                    .doOnNext(content -> {
+                        // 累积响应内容用于保存到历史
+                        responseBuilder.append(content);
+                    })
+                    .doOnComplete(() -> {
+                        // 流式响应完成后，在消息处理线程池中将完整回复添加到历史
+                        Mono.fromRunnable(() -> {
+                            String fullResponse = responseBuilder.toString();
+                            if (!fullResponse.isEmpty()) {
+                                List<MessageContent> currentHistory = conversationHistory.get(conversationId);
+                                if (currentHistory != null) {
+                                    currentHistory.add(MessageContent.assistant(fullResponse));
+                                    // 限制历史长度，避免token过多
+                                    if (currentHistory.size() > 20) {
+                                        currentHistory.subList(0, currentHistory.size() - 20).clear();
+                                    }
+                                }
                             }
-                        }
-                    }
-                })
-                .subscribeOn(Schedulers.fromExecutor(messageProcessingExecutor))
-                .subscribe();
-            });
-            
-            // 处理流式响应错误事件
-            return streamWithCompleteHandler.doOnError(error -> {
-                log.error("流式多轮对话失败", error);
-            });
+                        })
+                        .subscribeOn(Schedulers.fromExecutor(messageProcessingExecutor))
+                        .subscribe();
+                    })
+                    .doOnError(error -> {
+                        log.error("流式多轮对话失败", error);
+                    });
         });
+
+        return resultFlux;
     }
 
     /**
@@ -413,6 +431,9 @@ public class QiniuAiService {
                 })
                 .takeUntil(data -> "[DONE]".equals(data) || "data: [DONE]".equals(data))
                 .filter(data -> !"[DONE]".equals(data))
+                // 提取每个chunk中的content内容
+                .map(this::extractContentFromStreamChunk)
+                .filter(content -> content != null && !content.isEmpty())
                 .doOnError(error -> log.error("调用七牛云AI流式API失败", error))
                 .onErrorMap(error -> new RuntimeException("AI流式服务调用失败: " + error.getMessage(), error));
     }
@@ -425,17 +446,26 @@ public class QiniuAiService {
     private String extractContentFromStreamChunk(String chunk) {
         try {
             // 简单的内容提取，实际项目中建议使用Jackson
-            if (chunk.contains("\"content\":")) {
+            if (chunk != null && chunk.contains("\"content\":")) {
                 int start = chunk.indexOf("\"content\":\"") + 11;
                 int end = chunk.indexOf("\"", start);
                 if (start > 10 && end > start) {
-                    return chunk.substring(start, end);
+                    String content = chunk.substring(start, end);
+                    // 处理转义字符
+                    String unescapedContent = content.replace("\\n", "\n")
+                                 .replace("\\t", "\t")
+                                 .replace("\\\"", "\"")
+                                 .replace("\\\\", "\\");
+                    
+                    // 对流式内容也进行过滤
+                    return filterActionAndThoughts(unescapedContent);
                 }
             }
         } catch (Exception e) {
             log.warn("提取流式内容失败: {}", chunk, e);
         }
-        return null;
+        // 返回空字符串而不是null，避免NullPointerException
+        return "";
     }
 
     /**
