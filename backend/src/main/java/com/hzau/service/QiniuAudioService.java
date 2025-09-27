@@ -1,7 +1,10 @@
 package com.hzau.service;
 
 import com.hzau.config.QiniuAiConfig;
+import com.hzau.config.VoiceConfig;
 import com.hzau.dto.*;
+import com.hzau.entity.AiCharacter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
@@ -167,6 +170,45 @@ public class QiniuAudioService {
         return textToSpeech(text, config.getTts().getDefaultVoiceType(),
                 config.getTts().getDefaultEncoding(),
                 config.getTts().getDefaultSpeedRatio());
+    }
+
+    /**
+     * 文本转语音 (TTS) - 根据角色配置
+     * @param text 需要合成的文本
+     * @param character AI角色对象
+     * @return base64编码的音频数据
+     */
+    public Mono<String> textToSpeechWithCharacter(String text, AiCharacter character) {
+        log.info("开始文本转语音（角色配置）, text: {}, characterId: {}", text, character.getId());
+
+        // 解析角色的音色配置
+        VoiceConfig voiceConfig = parseVoiceConfig(character.getVoiceConfig());
+        
+        // 使用角色配置的音色参数
+        return textToSpeech(text, 
+                voiceConfig.getVoiceType(), 
+                config.getTts().getDefaultEncoding(), 
+                voiceConfig.getSpeedRatio());
+    }
+
+    /**
+     * 解析角色的音色配置JSON
+     * @param voiceConfigJson 音色配置JSON字符串
+     * @return VoiceConfig对象
+     */
+    private VoiceConfig parseVoiceConfig(String voiceConfigJson) {
+        if (voiceConfigJson == null || voiceConfigJson.trim().isEmpty()) {
+            log.warn("角色音色配置为空，使用默认配置");
+            return VoiceConfig.getDefault();
+        }
+        
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(voiceConfigJson, VoiceConfig.class);
+        } catch (Exception e) {
+            log.error("解析角色音色配置失败，使用默认配置: {}", e.getMessage());
+            return VoiceConfig.getDefault();
+        }
     }
 
     /**

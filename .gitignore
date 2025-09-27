@@ -1,3 +1,11 @@
+
+# 文件, 日志和上传的文件等
+*.mp3
+*.log
+*.wav
+*.gz
+
+
 # Compiled class file
 *.class
 

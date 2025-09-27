@@ -1,6 +1,7 @@
 package com.hzau.service;
 
 import com.hzau.entity.AiCharacter;
+import com.hzau.entity.CharacterSkill;
 import com.hzau.entity.Conversation;
 import com.hzau.entity.Message;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,9 @@ public class AiRoleplayService {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Autowired
+    private CharacterSkillService characterSkillService;
 
     private static final String OPENING_CACHE_KEY = "ai:opening:";
     private static final String CONTEXT_CACHE_KEY = "ai:context:";
@@ -193,7 +197,7 @@ public class AiRoleplayService {
         messageService.saveUserMessage(conversationId, userMessage);
 
         // 构建对话上下文
-        Mono<String> contextMono = buildConversationContext(conversationId, character, userMessage);
+        Mono<String> contextMono = buildConversationContext(conversationId, character, userMessage, null);
         Mono<String> chatMono = contextMono.flatMap(context -> {
             // 获取并发控制许可
             Mono<Boolean> permitMono = concurrentControlService.acquirePermit(userId.toString(), "llm");
@@ -224,10 +228,11 @@ public class AiRoleplayService {
      * @param userId 用户ID
      * @param conversationId 对话ID
      * @param userMessage 用户消息
+     * @param skill 技能触发标识
      * @return AI回复流
      */
-    public Flux<String> sendMessageStream(Integer userId, Long conversationId, String userMessage) {
-        log.info("发送消息（流式）, userId: {}, conversationId: {}, message: {}", userId, conversationId, userMessage);
+    public Flux<String> sendMessageStream(Integer userId, Long conversationId, String userMessage, String skill) {
+        log.info("发送消息（流式）, userId: {}, conversationId: {}, message: {}, skill: {}", userId, conversationId, userMessage, skill);
 
         // 验证对话是否属于用户
         if (!conversationService.isConversationOwnedByUser(conversationId, userId)) {
@@ -250,7 +255,7 @@ public class AiRoleplayService {
         messageService.saveUserMessage(conversationId, userMessage);
 
         // 构建对话上下文并进行流式对话
-        Mono<String> contextMono = buildConversationContext(conversationId, character, userMessage);
+        Mono<String> contextMono = buildConversationContext(conversationId, character, userMessage, skill);
         
         // 处理上下文并获取流式回复
         Flux<String> contextProcessingFlux = contextMono.flatMapMany(context -> {
@@ -304,10 +309,11 @@ public class AiRoleplayService {
      * @param conversationId 对话ID
      * @param character 角色信息
      * @param currentMessage 当前用户消息
+     * @param skill 技能参数
      * @return 上下文内容
      */
-    private Mono<String> buildConversationContext(Long conversationId, AiCharacter character, String currentMessage) {
-        log.info("构建对话上下文, conversationId: {}", conversationId);
+    private Mono<String> buildConversationContext(Long conversationId, AiCharacter character, String currentMessage, String skill) {
+        log.info("构建对话上下文, conversationId: {}, skill: {}", conversationId, skill);
 
         // 获取最近的对话历史
         List<Message> recentMessages = messageService.getRecentConversationMessages(conversationId, 10);
@@ -334,6 +340,16 @@ public class AiRoleplayService {
             context.append("\n");
         }
 
+        // 如果有技能参数，添加技能触发提示
+        if (skill != null && !skill.trim().isEmpty()) {
+            CharacterSkill characterSkill = characterSkillService.getSkillByCharacterIdAndName(character.getId(), skill);
+            if (characterSkill != null) {
+                context.append("技能触发：").append(characterSkill.getTriggerPrompt()).append("\n\n");
+                log.info("技能触发成功, characterId: {}, skill: {}", character.getId(), skill);
+            } else {
+                log.warn("技能触发失败, characterId: {}, skill: {}, 未找到匹配的技能", character.getId(), skill);
+            }
+        }
         // 添加当前用户消息
         context.append("用户：").append(currentMessage).append("\n");
         context.append("请以").append(character.getName()).append("的身份回复用户，保持角色一致性。");
@@ -349,11 +365,12 @@ public class AiRoleplayService {
      * @param localAudioUrl 本地音频文件URL（用于数据库存储）
      * @param ossAudioUrl OSS音频文件URL（用于语音转文本API调用）
      * @param audioFormat 音频格式
+     * @param skill 技能触发标识
      * @return AI回复（包含文本和语音URL）
      */
-    public Mono<VoiceChatResponse> sendVoiceMessage(Integer userId, Long conversationId, String localAudioUrl, String ossAudioUrl, String audioFormat) {
-        log.info("发送语音消息, userId: {}, conversationId: {}, localAudioUrl: {}, ossAudioUrl: {}, audioFormat: {}", 
-                userId, conversationId, localAudioUrl, ossAudioUrl, audioFormat);
+    public Mono<VoiceChatResponse> sendVoiceMessage(Integer userId, Long conversationId, String localAudioUrl, String ossAudioUrl, String audioFormat, String skill) {
+        log.info("发送语音消息, userId: {}, conversationId: {}, localAudioUrl: {}, ossAudioUrl: {}, audioFormat: {}, skill: {}", 
+                userId, conversationId, localAudioUrl, ossAudioUrl, audioFormat, skill);
 
         // 验证对话是否属于用户
         if (!conversationService.isConversationOwnedByUser(conversationId, userId)) {
@@ -382,15 +399,15 @@ public class AiRoleplayService {
                         messageService.saveUserVoiceMessage(conversationId, asrText, localAudioUrl, null);
 
                         // 3. 构建对话上下文并获取AI回复
-                        Mono<String> contextMono = buildConversationContext(conversationId, character, asrText);
+                        Mono<String> contextMono = buildConversationContext(conversationId, character, asrText, skill);
                         Mono<String> aiReplyMono = contextMono.flatMap(context -> {
                             String contextKey = CONTEXT_CACHE_KEY + conversationId;
                             return qiniuAiService.multiTurnChat(contextKey, context);
                         });
 
                         Mono<VoiceChatResponse> responseMono = aiReplyMono.flatMap(aiReplyText -> {
-                            // 4. 文本转语音
-                            Mono<String> ttsMono = qiniuAudioService.textToSpeech(aiReplyText);
+                            // 4. 文本转语音 - 使用角色配置的音色
+                            Mono<String> ttsMono = qiniuAudioService.textToSpeechWithCharacter(aiReplyText, character);
                             return ttsMono.flatMap(ttsBase64Data -> {
                                 try {
                                     // 5. 保存语音文件

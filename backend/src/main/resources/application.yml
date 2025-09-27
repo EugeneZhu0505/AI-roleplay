@@ -4,11 +4,12 @@ spring:
   application:
     name: ai-roleplay
 
-  # 文件上传配置
-  servlet:
+  # WebFlux 文件上传配置
+  webflux:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-in-memory-size: 1MB
+      max-disk-usage-per-part: 100MB
+      max-parts: 1024
   
   # 数据源配置
   datasource:
@@ -87,6 +88,7 @@ jwt:
 # 服务器配置
 server:
   port: 8080
+  address: 0.0.0.0  # 绑定到所有网络接口，允许局域网访问
 
 # 日志配置
 logging:
@@ -108,7 +110,7 @@ logging:
 file:
   upload:
     base-path: E:\Code\AI-roleplay\data
-    base-url: http://122.205.70.147
+    base-url: http://122.205.72.102
 
 
 # SpringDoc OpenAPI配置 - WebFlux版本

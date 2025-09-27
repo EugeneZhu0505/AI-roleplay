@@ -16,11 +16,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -126,137 +129,188 @@ public class ConversationController {
         }
     }
 
+
     /**
-     * 发送消息
+     * 文本格式进行聊天
+     * @param conversationId
+     * @param userId
+     * @param message
+     * @param skill
+     * @return
      */
-    @PostMapping(value = "/{conversationId}/messages", 
-                 consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.APPLICATION_JSON_VALUE},
-                 produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
-    @Operation(summary = "发送消息", description = "在指定对话中发送消息并获取AI回复，支持流式和非流式输出")
-    public Object sendMessage(
+    @PostMapping(value = "/{conversationId}/text-messages", 
+                 consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE},
+                 produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "发送文本消息", description = "发送文本消息并获取AI流式回复")
+    public Flux<String> sendTextMessage(
             @Parameter(description = "对话ID", required = true)
             @PathVariable Long conversationId,
             @Parameter(description = "用户ID", required = true)
             @RequestParam Integer userId,
-            @Parameter(description = "用户消息", required = false)
-            @RequestParam(value = "message", required = false) String message,
-            @Parameter(description = "输入类型", required = true)
-            @RequestParam("inputType") String inputType,
-            @Parameter(description = "音频格式", required = false)
-            @RequestParam(value = "audioFormat", required = false, defaultValue = "mp3") String audioFormat,
-            @Parameter(description = "语音文件", required = false)
-            @RequestParam(value = "audioFile", required = false) MultipartFile audioFile) {
+            @Parameter(description = "用户消息", required = true)
+            @RequestParam String message,
+            @Parameter(description = "技能触发标识", required = false)
+            @RequestParam(value = "skill", required = false) String skill) {
         
-        String callId = monitoringService.startApiCall("sendMessage", userId.toString());
+        String callId = monitoringService.startApiCall("sendTextMessage", userId.toString());
         long startTime = System.currentTimeMillis();
         
         try {
-            log.info("发送消息, conversationId: {}, userId: {}",
-                    conversationId, userId);
+            log.info("发送文本消息, conversationId: {}, userId: {}, message: {}, skill: {}",
+                    conversationId, userId, message, skill);
             
-            // 根据输入类型选择不同的处理方式
-            if ("audio".equals(inputType)) {
-                // 语音聊天：接收语音文件，先保存本地，再上传OSS，然后转文本，AI回复后转语音
-                
-                if (audioFile == null || audioFile.isEmpty()) {
-                    return Mono.just(Result.fail(ErrorCode.ERROR400.getCode(), "语音输入时audioFile不能为空"));
-                }
-                if (audioFormat == null || audioFormat.trim().isEmpty()) {
-                    audioFormat = "mp3"; // 默认格式
-                }
-                
-                try {
-                    // 先获取文件字节数组，避免MultipartFile被多次使用导致的问题
-                    byte[] audioBytes = audioFile.getBytes();
-                    String originalFilename = audioFile.getOriginalFilename();
-                    
-                    // 1. 上传到七牛云OSS，获取url2（用于语音转文本API调用）
-                    String ossAudioUrl = qiniuUploadService.uploadBytes(audioBytes, originalFilename);
-                    log.info("语音文件上传到OSS成功, ossUrl: {}", ossAudioUrl);
-                    
-                    // 2. 保存到本地服务器，获取url1（用于数据库存储）
-                    String localAudioUrl = fileStorageService.saveAudioBytes(audioBytes, originalFilename);
-                    log.info("语音文件保存到本地成功, localUrl: {}", localAudioUrl);
-                    
-                    // 3. 调用语音消息服务，传入本地URL和OSS URL
-                    Mono<AiRoleplayService.VoiceChatResponse> voiceMessageMono = 
-                        aiRoleplayService.sendVoiceMessage(userId, conversationId, localAudioUrl, ossAudioUrl, audioFormat);
-                    
-                    // 处理语音消息成功响应
-                    Mono<Result<Object>> voiceSuccessHandler = voiceMessageMono.map(response -> {
-                        // 记录成功的监控信息
-                        long responseTime = System.currentTimeMillis() - startTime;
-                        monitoringService.endApiCall("sendMessage", callId, responseTime, true);
-                        
-                        return Result.success(response);
-                    });
-                    
-                    // 处理语音消息错误响应
-                    Mono<Result<Object>> voiceErrorHandler = voiceSuccessHandler.onErrorResume(error -> {
-                        log.error("语音消息处理失败", error);
-                        
-                        // 记录失败的监控信息
-                        long responseTime = System.currentTimeMillis() - startTime;
-                        monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-                        
-                        return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音消息处理失败"));
-                    });
-                    
-                    return voiceErrorHandler;
-                    
-                } catch (Exception e) {
-                    log.error("语音文件处理失败", e);
-                    long responseTime = System.currentTimeMillis() - startTime;
-                    monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-                    return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音文件处理失败: " + e.getMessage()));
-                }
-            } else {
-                // 文本聊天：接收文本，返回流式文本
-                if (message == null || message.trim().isEmpty()) {
-                    return Mono.just(Result.fail(ErrorCode.ERROR400.getCode(), "文本输入时message不能为空"));
-                }
-                
-                // 调用流式消息服务
-                Flux<String> messageStreamFlux = aiRoleplayService.sendMessageStream(userId, conversationId, message);
-                
-                // 格式化流式数据
-                Flux<String> formattedStreamFlux = messageStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
-                
-                // 添加结束标记
-                Flux<String> streamWithEndMarker = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
-                
-                // 处理流式响应完成事件
-                Flux<String> streamWithCompleteHandler = streamWithEndMarker.doOnComplete(() -> {
-                    // 记录成功的监控信息
-                    long responseTime = System.currentTimeMillis() - startTime;
-                    monitoringService.endApiCall("sendMessage", callId, responseTime, true);
-                });
-                
-                // 处理流式响应错误事件
-
-                return streamWithCompleteHandler.onErrorResume(error -> {
-                    log.error("流式消息发送失败", error);
-
-                    // 记录失败的监控信息
-                    long responseTime = System.currentTimeMillis() - startTime;
-                    monitoringService.endApiCall("sendMessage", callId, responseTime, false);
-
-                    return Flux.just("data: " + "{\"error\":\"发送消息失败\"}\n\n");
-                });
+            // 验证消息不能为空
+            if (message == null || message.trim().isEmpty()) {
+                return Flux.just("data: " + "{\"error\":\"消息内容不能为空\"}\n\n");
             }
-        } catch (Exception e) {
-            log.error("发送消息失败, conversationId: {}", conversationId, e);
-            long responseTime = System.currentTimeMillis() - startTime;
-            monitoringService.endApiCall("sendMessage", callId, responseTime, false);
             
-            // 根据输入类型返回不同格式的错误
+            // 调用流式消息服务
+            Flux<String> messageStreamFlux = aiRoleplayService.sendMessageStream(userId, conversationId, message, skill);
             
-            if ("audio".equals(inputType)) {
-                return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "发送消息失败"));
-            } else {
+            // 格式化流式数据
+            Flux<String> formattedStreamFlux = messageStreamFlux.map(chunk -> "data: " + chunk + "\n\n");
+            
+            // 添加结束标记
+            Flux<String> streamWithEndMarker = formattedStreamFlux.concatWith(Flux.just("data: [DONE]\n\n"));
+            
+            // 处理流式响应完成事件
+            Flux<String> streamWithCompleteHandler = streamWithEndMarker.doOnComplete(() -> {
+                // 记录成功的监控信息
+                long responseTime = System.currentTimeMillis() - startTime;
+                monitoringService.endApiCall("sendTextMessage", callId, responseTime, true);
+            });
+            
+            // 处理流式响应错误事件
+            return streamWithCompleteHandler.onErrorResume(error -> {
+                log.error("流式文本消息发送失败", error);
+                
+                // 记录失败的监控信息
+                long responseTime = System.currentTimeMillis() - startTime;
+                monitoringService.endApiCall("sendTextMessage", callId, responseTime, false);
+                
                 return Flux.just("data: " + "{\"error\":\"发送消息失败\"}\n\n");
-            }
+            });
+            
+        } catch (Exception e) {
+            log.error("发送文本消息失败, conversationId: {}", conversationId, e);
+            long responseTime = System.currentTimeMillis() - startTime;
+            monitoringService.endApiCall("sendTextMessage", callId, responseTime, false);
+            
+            return Flux.just("data: " + "{\"error\":\"发送消息失败\"}\n\n");
         }
+    }
+
+
+    /**
+     * 语音格式进行聊天
+     * @param conversationId
+     * @param userId
+     * @param audioFileMono
+     * @param audioFormat
+     * @param skill
+     * @return
+     */
+    @PostMapping(value = "/{conversationId}/audio-messages",
+                 consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+                 produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "发送语音消息", description = "上传语音文件并获取AI回复")
+    public Mono<Result<Object>> sendAudioMessage(
+            @Parameter(description = "对话ID", required = true)
+            @PathVariable Long conversationId,
+            @Parameter(description = "用户ID", required = true)
+            @RequestPart("userId") String userId,
+            @Parameter(description = "语音文件", required = true)
+            @RequestPart("audioFile") Mono<FilePart> audioFileMono,
+            @Parameter(description = "音频格式", required = false)
+            @RequestPart(value = "audioFormat", required = false) String audioFormat,
+            @Parameter(description = "技能触发标识", required = false)
+            @RequestPart(value = "skill", required = false) String skill) {
+        
+        String callId = monitoringService.startApiCall("sendVoiceMessage", userId.toString());
+        long startTime = System.currentTimeMillis();
+
+        return audioFileMono.flatMap(audioFile -> {
+            try {
+                log.info("发送语音消息, conversationId: {}, userId: {}, audioFormat: {}, skill: {}",
+                        conversationId, userId, audioFormat, skill);
+                
+                // 验证语音文件
+                if (audioFile == null) {
+                    return Mono.just(Result.fail(ErrorCode.ERROR400.getCode(), "语音文件不能为空"));
+                }
+                
+                // 创建临时文件来保存上传的文件内容
+                Path tempFile = Files.createTempFile("audio_", "_" + audioFile.filename());
+                
+                // 将FilePart内容写入临时文件并获取字节数组
+                return audioFile.transferTo(tempFile)
+                    .then(Mono.fromCallable(() -> {
+                        byte[] audioBytes = Files.readAllBytes(tempFile);
+                        String originalFilename = audioFile.filename();
+                        
+                        // 清理临时文件
+                        Files.deleteIfExists(tempFile);
+                        
+                        return new Object[]{audioBytes, originalFilename};
+                    }))
+                    .flatMap(fileData -> {
+                        byte[] audioBytes = (byte[]) ((Object[]) fileData)[0];
+                        String originalFilename = (String) ((Object[]) fileData)[1];
+                        
+                        try {
+                            // 1. 上传到七牛云OSS，获取url2（用于语音转文本API调用）
+                            String ossAudioUrl = qiniuUploadService.uploadBytes(audioBytes, originalFilename);
+                            log.info("语音文件上传到OSS成功, ossUrl: {}", ossAudioUrl);
+                            
+                            // 2. 保存到本地服务器，获取url1（用于数据库存储）
+                            String localAudioUrl = fileStorageService.saveAudioBytes(audioBytes, originalFilename);
+                            log.info("语音文件保存到本地成功, localUrl: {}", localAudioUrl);
+                            
+                            // 3. 调用语音消息服务，传入本地URL和OSS URL
+                            Integer userIdInt = Integer.parseInt(userId);
+                            Mono<AiRoleplayService.VoiceChatResponse> voiceMessageMono = 
+                                aiRoleplayService.sendVoiceMessage(userIdInt, conversationId, localAudioUrl, ossAudioUrl, audioFormat, skill);
+                            
+                            // 处理语音消息成功响应
+                            Mono<Result<Object>> voiceSuccessHandler = voiceMessageMono.map(response -> {
+                                // 记录成功的监控信息
+                                long responseTime = System.currentTimeMillis() - startTime;
+                                monitoringService.endApiCall("sendVoiceMessage", callId, responseTime, true);
+                                
+                                return Result.success(response);
+                            });
+                            
+                            // 处理语音消息错误响应
+                            return voiceSuccessHandler.onErrorResume(error -> {
+                                log.error("语音消息处理失败", error);
+                                
+                                // 记录失败的监控信息
+                                long responseTime = System.currentTimeMillis() - startTime;
+                                monitoringService.endApiCall("sendVoiceMessage", callId, responseTime, false);
+                                
+                                return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音消息处理失败"));
+                            });
+                            
+                        } catch (Exception e) {
+                            log.error("语音文件处理失败", e);
+                            long responseTime = System.currentTimeMillis() - startTime;
+                            monitoringService.endApiCall("sendVoiceMessage", callId, responseTime, false);
+                            return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音文件处理失败: " + e.getMessage()));
+                        }
+                    });
+                    
+            } catch (IOException e) {
+                log.error("创建临时文件失败", e);
+                long responseTime = System.currentTimeMillis() - startTime;
+                monitoringService.endApiCall("sendVoiceMessage", callId, responseTime, false);
+                return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "文件处理失败: " + e.getMessage()));
+            }
+        }).onErrorResume(error -> {
+            log.error("语音文件上传处理失败", error);
+            long responseTime = System.currentTimeMillis() - startTime;
+            monitoringService.endApiCall("sendVoiceMessage", callId, responseTime, false);
+            return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "语音文件上传失败"));
+        });
     }
 
     /**
