@@ -2,7 +2,7 @@
 
 .main{
   width: 100%;
-  height: 890px;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -164,7 +164,7 @@
 
 /* 主内容区域样式 */
 .main-content {
-  max-width: 85%;
+  max-width: 100%;
   flex: 1;
   margin-left: 150px;
   padding: 20px;

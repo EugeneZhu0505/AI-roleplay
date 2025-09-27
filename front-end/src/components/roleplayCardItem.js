@@ -6,7 +6,7 @@ const RoleplayCardItem = (props) => {
 
     const handleClick = () => {
         props.roleplay.handleRoleplayCardClick({
-            key: props.roleplay.key,
+            key: props.roleplay.id,
             cover: props.roleplay.cover,
             name: props.roleplay.name,
             builder: props.roleplay.builder,
@@ -17,7 +17,7 @@ const RoleplayCardItem = (props) => {
 
 
     return(
-        <div className="roleplay-card-item-container" key={props.roleplay.key} onClick={handleClick}>
+        <div className="roleplay-card-item-container" key={props.roleplay.id} onClick={handleClick}>
             <img src={props.roleplay.cover} className="roleplay-card-item-image" />
 
             <div className="roleplay-card-item-text-container">

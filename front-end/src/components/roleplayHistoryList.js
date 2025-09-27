@@ -64,8 +64,8 @@ const RoleplayHistoryList = () => {
             </div>
             <div className="roleplay-history-list-item-container">
                 {
-                    RoleplayHistoryAI.map((item, _) => {
-                        return <RoleplayHistoryListItem item={item} />
+                    RoleplayHistoryAI.map((item, index) => {
+                        return <RoleplayHistoryListItem item={item} key={index} />
                     })
                 }
             </div>
