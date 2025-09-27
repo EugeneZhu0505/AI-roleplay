@@ -1,19 +1,37 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect , useCallback} from 'react';
 import './styles/roleplayChat.css';
-import { createConversation, postRequest } from './utils/api';
+import { createConversationPost, activeConversationPost, sendMessagePost } from './utils/api';
 
-const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
+const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
 
-    const [messages, setMessages] = useState([])
+    const [messagesHistory, setMessagesHistory] = useState([])
     const [input, setInput] = useState("");
+    const [conversationId, setConversationId] = useState();
+    const [characterId, setCharacterId] = useState();
+    const userId = JSON.parse(localStorage.getItem("login-success-user")).userId;
+    const userName = JSON.parse(localStorage.getItem("login-success-user")).username;
+    const characterName = roleplayDetailedInformation.name;
     const messagesEndRef = useRef(null);
-    
+    const streamControllerRef = useRef(null);
 
-    // 挂载时判断当前AI角色是否存在历史对话
+    // 挂载时创建对话
     useEffect(() => {
-        if (roleplayDetailedInformation.isHistory) {
-            
-        }
+        const url = `${process.env.REACT_APP_API_BASE_URL}/api/conversations?userId=${userId}&characterId=${roleplayDetailedInformation.key}&title=与${roleplayDetailedInformation.name}的对话`;
+        createConversationPost(url).then((response) => {
+            setConversationId(response.data.conversation.id);
+            setCharacterId(response.data.conversation.characterId);
+            handleMessageHistory(response.data.opening, "ai");
+
+            // 激活对话
+            const activeUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${response.data.conversation.id}/activate?userId=${userId}`;
+            activeConversationPost(activeUrl).catch((_) => {
+                alert('激活对话失败，请稍后重试');
+            })
+
+        }).catch((_) => {
+            alert('创建对话失败，请稍后重试');
+        })
+      
     }, [roleplayDetailedInformation]);
 
 
@@ -21,56 +39,127 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
         setInput(value)
     };
 
-    const handleSendClick = async() => {
-        if (input.trim() === "") return;
-        handleCreateReponse(input, "user");
-        setInput("");
-    }
-
-
     const scrollButtom = () => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"})
-    }
+    };
 
     useEffect(()=>{
         scrollButtom();
-    },[messages])
+    },[messagesHistory])
 
-    // useEffect(()=> {
-    //     handleCreate();
-    //     postRequest('http://122.205.70.147:8080/api/conversations/1014/activate?userId=5', {})
-    // },[])
-
-
-  const handleCreateReponse = (result, sender) =>{
-        setMessages([
-            ...messages,
+  const handleMessageHistory = (result, sender) =>{
+        setMessagesHistory((prevMessages) => [ 
+            ...prevMessages,
             {
-                id: messages.length + 1,
+                id: prevMessages.length > 0 ? prevMessages[prevMessages.length - 1].id + 1 : 1,
                 content: result,
                 sender: sender,
             }
         ]);
     }  
 
-//   const handleCreate = async () => {
-//     try {
-//         const response = await createConversation(5, 1, "打招呼");
-//         const data = await response.json();
-//         const result = data.data; // 假设API返回格式为{data: ...}
-
-//         // 处理成功逻辑
-//         handleCreateReponse(result, "ai");
-//     } catch (error) {
-//         console.error('创建对话失败:', error);
-//         alert('创建对话失败，请稍后重试');
-//     }
-//   };
-
 
     const openSpeech = () =>{
-        handleSpeechClick(true)
+        handleSpeechClick(true, {
+            conversationId: conversationId,
+            userId: userId,
+        })
     }
+
+    const handleSendClick = async() => {
+        if (input.trim() === "") return;
+        handleMessageHistory(input, "user");
+
+        const sendUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${conversationId}/text-messages?userId=${userId}&message=${input}&inputType=text`;
+        setInput("");
+        await handleSendMessageResponse(sendUrl, {});
+    }
+
+    const handleSendMessageResponse = useCallback(async(url, message) => {
+        try {
+            // const responseId = messagesHistory[messagesHistory.length-1].id + 1
+            let responseId
+            setMessagesHistory((prev) => {
+                responseId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 1;
+                return [
+                ...prev,
+                {
+                    id: responseId,
+                    content: "",
+                    sender: "ai",
+                }
+            ]});
+
+            // 获取流读取器
+            const reader = await sendMessagePost(url, message,);
+
+            // 创建流控制器
+            const abortController = new AbortController();
+            streamControllerRef.current = abortController;
+
+            const decoder = new TextDecoder();
+            let buffer = ""
+
+            while(true){
+                // 每次读取一个数据块
+                const {value, done} = await reader.read()
+                if(done || abortController.signal.aborted){
+                    break;
+                }
+
+                const chunk = decoder.decode(value, {stream: true});
+                buffer += chunk;
+
+                const lines = buffer.split("\n");
+                buffer = lines.pop();
+
+                for(const line of lines){
+                    let newData = ""
+                    if(line.startsWith("data:")){
+                        newData = line.slice(11).trim();
+                        if(newData === "[DONE]") {
+                            reader.cancel();
+                            streamControllerRef.current = null;
+                            return;
+                        }
+                    }
+                    
+                    if(newData !== ""){
+                        setMessagesHistory(
+                            (prev) => {
+                                const newMessages = [...prev];
+                                const index = newMessages.findIndex((msg) => msg.id === responseId);
+
+                                if (index !== -1) {
+                                    let contentToAdd = newData;
+                                    try {
+                                        const parsedData = JSON.parse(newData);
+                                        contentToAdd = parsedData.text || parsedData.content || newData; 
+                                    } catch (error) {
+                                    // 非 JSON 数据，直接使用 newData
+                                        contentToAdd = newData;
+                                    }
+                                
+                                    // 3. 更新消息内容
+                                    newMessages[index] = {
+                                        ...newMessages[index], 
+                                        content: newMessages[index].content + contentToAdd
+                                    };
+                                }
+                                return newMessages
+                            })
+                     }
+                }
+            }
+        } catch (error) {
+            alert('发送消息失败，请稍后重试');
+        } finally{
+            if (streamControllerRef.current && typeof streamControllerRef.current.cancel === "function") {
+                streamControllerRef.current.cancel();
+                streamControllerRef.current = null;
+            }
+        }
+    }, [characterId, userId, messagesHistory]);
 
 
 
@@ -83,15 +172,15 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
                 </div>
 
                 <div className="roleplay-chat-messages">
-                    {messages.map((message) => (
+                    {messagesHistory.map((message) => (
                     <div
                         key={message.id}
                         className={`message ${message.sender === "ai" ? "ai-message" : "user-message"}`}
                     >
                         <div className='message-container'>
-                            <img src={require('../imgs/place_charac_image.png')} className='message-image'/>
+                            <img src={message.sender === "ai" ? roleplayDetailedInformation.cover : JSON.parse(localStorage.getItem("login-success-user")).avatarUrl} className='message-image'/>
                             <div className="message-sender">
-                                {message.sender === "ai" ? "AI" : "你"}
+                                {message.sender === "ai" ? `${characterName}` : `${userName}`}   
                             </div>
                         </div>
                         <div className="message-content">{message.content}</div>
@@ -127,7 +216,7 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
                 </div>
 
                 <div className='roleplay-setting-body'>
-                    <ur className='roleplay-setting-ur-container'>
+                    <div className='roleplay-setting-ur-container'>
                         <div className='roleplay-setting-ur-item'>
                             <img src={require('../imgs/chat-new.png')} className='roleplay-setting-image'/>
                             新对话
@@ -149,7 +238,7 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick }) => {
                             模型
                         </div>
                         
-                    </ur>
+                    </div>
                 </div>
             </div>
 

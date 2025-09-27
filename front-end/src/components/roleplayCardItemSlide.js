@@ -2,35 +2,26 @@ import { useState, useEffect } from 'react';
 import RoleplayCardItem from './roleplayCardItem';
 import './styles/roleplayCardItemSlide.css';
 
-const images = [
-    '0',
-    '1',
-    '2',
-    '3', 
-    '4', 
-    '5', 
-    '6', 
-    '7', 
-];
 
 const RoleplayListSlide = (props) => {
-    const itemsPerPage = 4;
+    const [itemsPerPage, setItemsPerPage] = useState(4);
     const [visibleItems, setVisibleItems] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
+
     useEffect(() => {
-        setCurrentIndex(4);
+        setItemsPerPage(props.roleplayList.length > 4 ? 4 : props.roleplayList.length);
     }, [])
 
     useEffect(() => {
-        const newvisibleItems = images.slice(currentIndex, currentIndex + itemsPerPage);
+        const newvisibleItems = props.roleplayList.slice(currentIndex, currentIndex + itemsPerPage);
         setVisibleItems(newvisibleItems);
 
     }, [currentIndex]);
 
 
     const nextSlide = () => {
-        if (currentIndex + 1 <= images.length-itemsPerPage) {
+        if (currentIndex + 1 <= props.roleplayList.length-itemsPerPage) {
             setCurrentIndex(currentIndex + 1);
         }
     }
@@ -46,20 +37,21 @@ const RoleplayListSlide = (props) => {
                 <img className={`prevButton ${currentIndex === 0 ? 'disabled' : ''}`} src={require('../imgs/prev.png')} onClick={prevSlide}/>
             </div>
             <div className="roleplayCardItem-slide">
-                {visibleItems.map((image, index) => (
+                {visibleItems.map((roleplayItem, index) => (
                     <RoleplayCardItem roleplay={{
-                            key: image,
-                            cover: 'https://characterai.io/i/200/static/avatars/uploaded/2023/11/29/LC67szCU6GtiPnevTnUdJ1N8UDhXQbEVxnG0R7tw4js.webp?webp=true&anim=0',
-                            name: `角色${image}`,
-                            builder: `构建者${image}`,
-                            desc: '这是一个角色的描述',
+                            key: index,
+                            id: roleplayItem.id,
+                            cover: roleplayItem.avatarUrl,
+                            name: roleplayItem.name,
+                            builder: "admin",
+                            desc: roleplayItem.description,
                             likeCount: "10M",
                             handleRoleplayCardClick: props.handleRoleplayCardClick,
                     }} />
                 ))}
             </div>
             <div className="nextButton-container">
-                <img className={`nextButton ${currentIndex === (images.length - itemsPerPage) ? "disabled": ""}`} src={require('../imgs/next.png')} onClick={nextSlide}/>
+                <img className={`nextButton ${currentIndex === (props.roleplayList.length - itemsPerPage) ? "disabled": ""}`} src={require('../imgs/next.png')} onClick={nextSlide}/>
             </div>
         </div>
     );

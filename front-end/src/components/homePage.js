@@ -6,24 +6,19 @@ import RoleplayChat from './roleplayChat';
 import RoleplayHistoryList from './roleplayHistoryList';
 import RoleplaySpeech from './roleyplaySpeech';
 
-const roleplayDetailedInformation = {
-    key: '1',
-    cover: 'https://img.qiniu.ai/roleplay/1.png',
-    name: '角色名',
-    builder: '构建者',
-    desc: '角色描述',
-    likeCount: 0,
+const callingCoversationDetail = {
+    conversationId: -1,
+    userId: -1,
 }
 
 function HomePage() {
 
     // 移动端侧边栏控制状态
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [username, setUsername] = useState(localStorage.getItem('username') || '');
-    const [image, setImage] = useState(localStorage.getItem('image') || '');
     const [isChat, setIsChat] = useState(false)
     const [selectedRoleplay, setSelectedRoleplay] = useState(null)
     const [isSpeechOpen, setIsSpeechOpen] = useState(false)
+    const [callingCoversationDetails, setingCallingCoversationDetails] = useState(callingCoversationDetail);
 
     const navigate = useNavigate();
     
@@ -34,12 +29,10 @@ function HomePage() {
 
     const closeSidebar = () => {
         setSidebarOpen(false);
-        console.log('关闭侧边栏');
     }
     
 
     const handleRoleplayCardClick = (roleplayDetailedInformation) => {
-        console.log('点击了角色', roleplayDetailedInformation);
         setSelectedRoleplay(roleplayDetailedInformation)
         setIsChat(true)
     }
@@ -49,8 +42,9 @@ function HomePage() {
         setIsChat(false)
     }
 
-    const handleSpeechClick = (isOpen) => {
+    const handleSpeechClick = (isOpen, callingCoversationDetails) => {
         setIsSpeechOpen(isOpen);
+        setingCallingCoversationDetails(callingCoversationDetails)
     }
     
     
@@ -105,13 +99,13 @@ function HomePage() {
                 {isChat ? (
                     <RoleplayChat roleplayDetailedInformation={selectedRoleplay} handleSpeechClick={handleSpeechClick} />
                 ) : (
-                    <RoleplayList handleRoleplayCardClick={handleRoleplayCardClick} username={username} image={image} />
+                    <RoleplayList handleRoleplayCardClick={handleRoleplayCardClick}/>
                 )}
             </main>
 
         </div>
 
-        {isSpeechOpen && <RoleplaySpeech handleSpeechClick={handleSpeechClick} roleplayDetailedInformation={selectedRoleplay} />}
+        {isSpeechOpen && <RoleplaySpeech handleSpeechClick={handleSpeechClick} callingCoversationDetails={callingCoversationDetails} roleplayDetailedInformation={selectedRoleplay} />}
         </div>
     )
 }

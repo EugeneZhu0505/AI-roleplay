@@ -10,6 +10,28 @@ const Login = ({ visible, onClose, successLogin }) => {
     const [captcha, setCaptcha] = useState('');
     const [generatedCaptcha,setGeneratedCaptcha] = useState('');
 
+
+
+    const handleLoginResponse = async (fromData) => {
+        try{
+            const result = await LoginPost(`${process.env.REACT_APP_API_BASE_URL}/api/auth/login`, fromData)
+            if (result) {
+                localStorage.setItem("login-success-user", JSON.stringify(
+                    {
+                        "username": result.data.username,
+                        "avatarUrl": result.data.avatarUrl,
+                        "userId": result.data.userId,
+                        "password": password,
+                        "accessToken": result.data.accessToken,
+                    }));
+                successLogin(true);
+                onClose();
+            }
+        } catch (error) {
+            alert('登录请求出错：' + error.message);
+        }
+    } 
+
     const generateCaptcha = () => {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let captcha = '';
@@ -31,32 +53,25 @@ const Login = ({ visible, onClose, successLogin }) => {
                 "username": username,
                 "password": password,
             };
-            
-            // try{
-            //     const result = await LoginPost('http://122.205.70.147:8080/api/auth/login', fromData)
-            //     if (result) {
-            //         localStorage.setItem('accessToken', result.data.accessToken);
-            //         localStorage.setItem('userId', result.data.userId);
-            //         localStorage.setItem('username', result.data.username);
-            //         localStorage.setItem('image', result.data.avatarUrl);
-            //         successLogin(true);
-            //         onClose();
-            //     }
-            // } catch (error) {
-            //     alert('登录请求出错：' + error.message);
-            // }
-            successLogin(true);
-            
+            await handleLoginResponse(fromData);
+
         } else {
             alert('验证码错误');
         }
     }
 
     useEffect(() => {
-        generateCaptcha();
-        setUsername(localStorage.getItem('username') || '');
-        setPassword(localStorage.getItem('password') || '');
-        setCaptcha('');
+        const loginSuccessUser = localStorage.getItem("login-success-user");
+        if (loginSuccessUser) {
+            const user = JSON.parse(loginSuccessUser);
+            const formData = {
+                "username": user.username,
+                "password": user.password,
+            };
+            handleLoginResponse(formData).then()
+        } else{
+            generateCaptcha();
+        }
     }, []);
 
     const handleCancel = () => {
