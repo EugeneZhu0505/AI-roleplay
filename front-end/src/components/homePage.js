@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles/homePageStyles.css';
 import RoleplayList from './roleplayList';
 import RoleplayChat from './roleplayChat';
 import RoleplayHistoryList from './roleplayHistoryList';
 import RoleplaySpeech from './roleyplaySpeech';
+import { HistoryAICharacter, SelectedAICharacter } from './utils/historyAICharacter';
 
 const callingCoversationDetail = {
     conversationId: -1,
@@ -16,9 +17,12 @@ function HomePage() {
     // 移动端侧边栏控制状态
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isChat, setIsChat] = useState(false)
-    const [selectedRoleplay, setSelectedRoleplay] = useState(null)
+    const [selectedRoleplay, setSelectedRoleplay] = useState({})
     const [isSpeechOpen, setIsSpeechOpen] = useState(false)
     const [callingCoversationDetails, setingCallingCoversationDetails] = useState(callingCoversationDetail);
+    const [chatHistoryCharacters, setChatHistoryCharacters] = useState([]);
+    const [searchText, setSearchText] = useState("");
+    const [filteredCharacters, setFilteredCharacters] = useState([]);
 
     const navigate = useNavigate();
     
@@ -30,15 +34,9 @@ function HomePage() {
     const closeSidebar = () => {
         setSidebarOpen(false);
     }
-    
 
-    const handleRoleplayCardClick = (roleplayDetailedInformation) => {
-        setSelectedRoleplay(roleplayDetailedInformation)
-        setIsChat(true)
-    }
 
-    const handleFinderClikc = () => {
-        setSelectedRoleplay(null)
+    const handleFinderClick = () => {
         setIsChat(false)
     }
 
@@ -46,9 +44,47 @@ function HomePage() {
         setIsSpeechOpen(isOpen);
         setingCallingCoversationDetails(callingCoversationDetails)
     }
+
+    const addChatHistoryCharacter = (character) => {
+        const existingIndex = chatHistoryCharacters.findIndex(
+            (item) => item.id === character.id
+        )
+        
+        if (existingIndex === -1) {
+            let updatedCharacters;
+            updatedCharacters = [...chatHistoryCharacters];
+            updatedCharacters.unshift(character);
+            setChatHistoryCharacters(updatedCharacters);
+        }
+
+    }
+
+    const handleSearchChange = (e) => {
+        const searchText = e.target.value;
+        setSearchText(searchText);
+    }
+
+    useEffect(() => {
+        if (searchText) {
+            const filteredCharacters = chatHistoryCharacters.filter(
+                (character) => character.name.includes(searchText)
+            );
+            setFilteredCharacters(filteredCharacters);
+        } else {
+            setFilteredCharacters(chatHistoryCharacters);
+        }
+    }, [searchText]);
+
+
+    useEffect(() => {
+        setFilteredCharacters(chatHistoryCharacters);
+    }, [chatHistoryCharacters]);
+
     
     
     return (
+        <HistoryAICharacter.Provider value={{filteredCharacters, chatHistoryCharacters, addChatHistoryCharacter, setChatHistoryCharacters}}>
+        <SelectedAICharacter.Provider value={{selectedRoleplay, setSelectedRoleplay, setIsChat}}>
         <div className='main'>
         <div className={`home-page ${isSpeechOpen ? 'hidden' : ""}`}>
 
@@ -78,14 +114,14 @@ function HomePage() {
                     <p className='sidebar-create-text'>创建</p>
                 </div>
 
-                <div className="sidebar-find-container" onClick={handleFinderClikc}>
+                <div className="sidebar-find-container" onClick={handleFinderClick}>
                     <img src={require("../imgs/find.png")} className='sidebar-find-icon'/>
                     <p className='sidebar-find-text'>发现</p>
                 </div>
 
                 <div className="sidebar-search-container">
                     <img src={require("../imgs/search-icon.png")} className='sidebar-search-icon'/>
-                    <input type='text' className='sidebar-search-input' placeholder='搜索'/>
+                    <input type='text' className='sidebar-search-input' placeholder='搜索' onChange={handleSearchChange}/>
                 </div>
 
                 <div className="sidebar-history-container">
@@ -99,7 +135,7 @@ function HomePage() {
                 {isChat ? (
                     <RoleplayChat roleplayDetailedInformation={selectedRoleplay} handleSpeechClick={handleSpeechClick} />
                 ) : (
-                    <RoleplayList handleRoleplayCardClick={handleRoleplayCardClick}/>
+                    <RoleplayList />
                 )}
             </main>
 
@@ -107,6 +143,8 @@ function HomePage() {
 
         {isSpeechOpen && <RoleplaySpeech handleSpeechClick={handleSpeechClick} callingCoversationDetails={callingCoversationDetails} roleplayDetailedInformation={selectedRoleplay} />}
         </div>
+        </SelectedAICharacter.Provider>
+        </HistoryAICharacter.Provider>
     )
 }
 

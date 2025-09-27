@@ -1,9 +1,11 @@
 import "./styles/roleplayList.css"
 import { useState, useEffect, useCallback } from 'react';
 import RoleplayListSlide from './roleplayCardItemSlide';
-import { getRoleplayList } from './utils/api';
+import { getApiNotBody } from './utils/api';
+import React from "react";
 
-const RoleplayList = (props) => {
+
+const RoleplayList = React.memo((props) => {
     const [username, setUsername] = useState('');
     const [image, setImage] = useState('');
     const [roleplayList, setRoleplayList] = useState([]);
@@ -22,7 +24,7 @@ const RoleplayList = (props) => {
         const handleGetRoleplayListResonse = async () => {
             try{
                 setIsLoadingRecommend(true); 
-                const roleplayList = await getRoleplayList(`${process.env.REACT_APP_API_BASE_URL}/api/characters`);
+                const roleplayList = await getApiNotBody(`${process.env.REACT_APP_API_BASE_URL}/api/characters`);
                 setRoleplayList(roleplayList.data);
                 setIsLoadingRecommend(false); 
             }catch (error){
@@ -36,13 +38,23 @@ const RoleplayList = (props) => {
     const handleGetCategoryRoleplayResponse = useCallback(async (category) =>{
         try{
             setIsLoadingCategory(true); 
-            const roleplayList = await getRoleplayList(`${process.env.REACT_APP_API_BASE_URL}/api/characters/category/${category}`);
+            const roleplayList = await getApiNotBody(`${process.env.REACT_APP_API_BASE_URL}/api/characters/category/${category}`);
             setCategoryRolePlayList(roleplayList.data);
             setIsLoadingCategory(false); 
         }catch (error){
             console.error('获取角色列表失败:', error);
         }
-    }, [])
+    })
+
+
+    // const handleGetCharacterGreeting = useCallback(async () =>{
+    //     try{
+    //         const greeting = await getCharacterGreeting(`${process.env.REACT_APP_API_BASE_URL}/api/characters/${characterId}/greeting`);
+    //         return greeting.data;
+    //     }catch (error){
+    //         console.error('获取角色开场白失败:', error);
+    //     }
+    // }, [])
 
     return(
         <div className="roleplayList-container">
@@ -75,7 +87,7 @@ const RoleplayList = (props) => {
                 <div className="roleplayList-recommend-list-container">
                     {isLoadingRecommend ?
                     (<p>角色列表加载中...</p>):
-                    <RoleplayListSlide  handleRoleplayCardClick={props.handleRoleplayCardClick} roleplayList={roleplayList}/>
+                    <RoleplayListSlide  roleplayList={roleplayList}/>
                     }
             
                 </div>
@@ -107,12 +119,15 @@ const RoleplayList = (props) => {
                 <div className="rolepalyList-voice-header">
                     语音
                 </div>
+                <div className="rolepalyList-voice-list-container">
+                    
+                </div>
 
                 
             </div>
 
         </div>
     )
-}
+})
 
 export default RoleplayList;

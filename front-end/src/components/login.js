@@ -1,5 +1,5 @@
 import { Modal} from 'antd';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './styles/login.css';
 import { LoginPost } from './utils/api';
 
@@ -7,9 +7,7 @@ const Login = ({ visible, onClose, successLogin }) => {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [captcha, setCaptcha] = useState('');
-    const [generatedCaptcha,setGeneratedCaptcha] = useState('');
-
+    const passwordRef = useRef(null);
 
 
     const handleLoginResponse = async (fromData) => {
@@ -21,7 +19,7 @@ const Login = ({ visible, onClose, successLogin }) => {
                         "username": result.data.username,
                         "avatarUrl": result.data.avatarUrl,
                         "userId": result.data.userId,
-                        "password": password,
+                        "password": passwordRef.current,
                         "accessToken": result.data.accessToken,
                     }));
                 successLogin(true);
@@ -32,32 +30,21 @@ const Login = ({ visible, onClose, successLogin }) => {
         }
     } 
 
-    const generateCaptcha = () => {
-        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let captcha = '';
-        for (let i = 0; i < 4; i++) {
-            captcha += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
-        setGeneratedCaptcha(captcha);
-    };
 
     const handleOk = async () => {
         // 验证表单数据
-        if (!username || !password || !captcha) {
+        if (!username || !password) {
             alert('请填写完整信息');
             return;
         }
 
-        if (captcha === generatedCaptcha) {
-            const fromData = {
-                "username": username,
-                "password": password,
-            };
-            await handleLoginResponse(fromData);
+        const fromData = {
+            "username": username,
+            "password": password,
+        };
+        passwordRef.current = password;
+        await handleLoginResponse(fromData);
 
-        } else {
-            alert('验证码错误');
-        }
     }
 
     useEffect(() => {
@@ -69,8 +56,6 @@ const Login = ({ visible, onClose, successLogin }) => {
                 "password": user.password,
             };
             handleLoginResponse(formData).then()
-        } else{
-            generateCaptcha();
         }
     }, []);
 
@@ -83,8 +68,6 @@ const Login = ({ visible, onClose, successLogin }) => {
             setUsername(e.target.value);
         } else if (e.target.name === 'password') {
             setPassword(e.target.value);
-        } else if (e.target.name === 'captcha') {
-            setCaptcha(e.target.value);
         }
     }
     
@@ -104,18 +87,6 @@ const Login = ({ visible, onClose, successLogin }) => {
                 <div className="form-item">
                     <label className="form-label">密码:</label>
                     <input type="password" className="form-input" name="password" onChange={handleChange} />
-                </div>
-                <div className="form-item">
-                    <label className="form-label">验证码:</label>
-                    <input type="text" className="form-input" name="captcha" onChange={handleChange} />
-                    <span className="captcha-text">{generatedCaptcha}</span>
-                    <button
-                    type="button"   
-                    className="refresh-captcha-button"
-                    onClick={generateCaptcha}
-                    >
-                    刷新
-                    </button>
                 </div>
             </form>
         </Modal>

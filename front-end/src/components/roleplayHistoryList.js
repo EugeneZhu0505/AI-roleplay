@@ -1,62 +1,43 @@
 import RoleplayHistoryListItem from './roleplayHistoryListItem'
 import './styles/roleplayHistoryList.css'
+import {HistoryAICharacter} from './utils/historyAICharacter';
+import { getApiNotBody } from './utils/api';
+import { useContext, useEffect } from 'react';
+import React from 'react';
 
-const RoleplayHistoryAI = [
-    {   
-        id: 1,
-        name: '角色1',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/2/3/CcwSs9WLY9fmHnGsRkNDR-5Wt_5hD-U1K2dFcXvv8lM.webp?webp=true&anim=0',
-    },
-    {
-        id: 2,
-        name: '角色2',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/3/2/yGY_jD45XZCo55HvB2apKrqtfVOGhU1PiCkWmXA2jCA.webp?webp=true&anim=0',
-    },
-    {
-        id: 3,
-        name: '角色1',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/2/3/CcwSs9WLY9fmHnGsRkNDR-5Wt_5hD-U1K2dFcXvv8lM.webp?webp=true&anim=0',
-    },
-    {
-        id: 4,
-        name: '角色2',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/3/2/yGY_jD45XZCo55HvB2apKrqtfVOGhU1PiCkWmXA2jCA.webp?webp=true&anim=0',
-    },
-    {
-        id: 5,
-        name: '角色1',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/2/3/CcwSs9WLY9fmHnGsRkNDR-5Wt_5hD-U1K2dFcXvv8lM.webp?webp=true&anim=0',
-    },
-    {
-        id: 6,
-        name: '角色2',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/3/2/yGY_jD45XZCo55HvB2apKrqtfVOGhU1PiCkWmXA2jCA.webp?webp=true&anim=0',
-    },
-    {
-        id: 7,
-        name: '角色1',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/2/3/CcwSs9WLY9fmHnGsRkNDR-5Wt_5hD-U1K2dFcXvv8lM.webp?webp=true&anim=0',
-    },
-    {
-        id: 8,
-        name: '角色2',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/3/2/yGY_jD45XZCo55HvB2apKrqtfVOGhU1PiCkWmXA2jCA.webp?webp=true&anim=0',
-    },
-    {
-        id: 9,
-        name: '角色1',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/2/3/CcwSs9WLY9fmHnGsRkNDR-5Wt_5hD-U1K2dFcXvv8lM.webp?webp=true&anim=0',
-    },
-    {
-        id: 10,
-        name: '角色2',
-        avatar: 'https://characterai.io/i/80/static/avatars/uploaded/2023/3/2/yGY_jD45XZCo55HvB2apKrqtfVOGhU1PiCkWmXA2jCA.webp?webp=true&anim=0',
-    },
+const RoleplayHistoryList = React.memo(() => {  
+    const {filteredCharacters, setChatHistoryCharacters} = useContext(HistoryAICharacter);
+    const userId = JSON.parse(localStorage.getItem("login-success-user")).userId;
 
-]
+    useEffect(()=>{
+        const handleGetHistoryRoleplayList = async() => {
+            let url = `${process.env.REACT_APP_API_BASE_URL}/api/conversations?userId=${userId}`;
+            const historyResponse = await getApiNotBody(url);
+            const historyData = historyResponse.data;
 
+            const promiseArray = historyData.map((item) => {
+                url = `${process.env.REACT_APP_API_BASE_URL}/api/characters/${item.characterId}`
+                return getApiNotBody(url)
+                .then(characterResponse => {
+                    const characterData = characterResponse.data;
+                    return {
+                        conversationId: item.id,
+                        characterId: characterData.id,
+                        cover: characterData.avatarUrl,
+                        name: characterData.name,
+                        description: characterData.description,
+                        title: item.title,
+                    }
+                })
+            });
 
-const RoleplayHistoryList = () => {
+            const newData = await Promise.all(promiseArray);
+            setChatHistoryCharacters(newData);
+        }
+
+        handleGetHistoryRoleplayList();
+    }, [])
+
     return(     
         <div className="roleplay-history-list-container">
             <div className="roleplay-history-list-title">
@@ -64,14 +45,14 @@ const RoleplayHistoryList = () => {
             </div>
             <div className="roleplay-history-list-item-container">
                 {
-                    RoleplayHistoryAI.map((item, index) => {
-                        return <RoleplayHistoryListItem item={item} key={index} />
+                    filteredCharacters.map((roleplay) => {
+                        return <RoleplayHistoryListItem roleplay={roleplay} />
                     })
                 }
             </div>
 
         </div>
     )
-}
+})
 
 export default RoleplayHistoryList

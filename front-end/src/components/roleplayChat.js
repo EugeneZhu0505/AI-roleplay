@@ -1,37 +1,75 @@
 import { useState, useRef, useEffect , useCallback} from 'react';
 import './styles/roleplayChat.css';
-import { createConversationPost, activeConversationPost, sendMessagePost } from './utils/api';
+import { createConversationPost, activeConversationPost, sendMessagePost, getApiNotBody } from './utils/api';
 
 const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
-
+    const [hasConversation, setHasConversation] = useState(false);
     const [messagesHistory, setMessagesHistory] = useState([])
+    const [conversationId, setConversationId] = useState(-1);
     const [input, setInput] = useState("");
-    const [conversationId, setConversationId] = useState();
-    const [characterId, setCharacterId] = useState();
+    const [characterId, setCharacterId] = useState(-1);
     const userId = JSON.parse(localStorage.getItem("login-success-user")).userId;
     const userName = JSON.parse(localStorage.getItem("login-success-user")).username;
     const characterName = roleplayDetailedInformation.name;
     const messagesEndRef = useRef(null);
     const streamControllerRef = useRef(null);
+    const hasConversationRef = useRef(null);
+    const conversationIdRef = useRef(null);
+    const characterIdRef = useRef(null);
 
-    // 挂载时创建对话
+    // 挂载和点击不同角色时
     useEffect(() => {
-        const url = `${process.env.REACT_APP_API_BASE_URL}/api/conversations?userId=${userId}&characterId=${roleplayDetailedInformation.key}&title=与${roleplayDetailedInformation.name}的对话`;
-        createConversationPost(url).then((response) => {
-            setConversationId(response.data.conversation.id);
-            setCharacterId(response.data.conversation.characterId);
-            handleMessageHistory(response.data.opening, "ai");
+        setMessagesHistory([]);
 
-            // 激活对话
-            const activeUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${response.data.conversation.id}/activate?userId=${userId}`;
-            activeConversationPost(activeUrl).catch((_) => {
-                alert('激活对话失败，请稍后重试');
-            })
+        setCharacterId(roleplayDetailedInformation.characterId);
+        characterIdRef.current = roleplayDetailedInformation.characterId;
 
+        // 获取特定角色的对话列表, 判断是否有历史对话
+        const conversationHistoryUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/character/${characterIdRef.current}?userId=${userId}`;
+        getApiNotBody(conversationHistoryUrl).then((response) => {
+            if (response.data.length > 0){
+                setHasConversation(true);
+                hasConversationRef.current = true;
+                setConversationId(response.data[0].id);
+                conversationIdRef.current = response.data[0].id;
+            }
+
+            if(hasConversationRef.current === true && conversationIdRef.current !== -1){
+                // 激活对话
+                const activeUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${conversationIdRef.current}/activate?userId=${userId}`;
+                activeConversationPost(activeUrl).catch((_) => {alert('激活对话失败，请稍后重试'); })
+
+                const messageHistoryUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${conversationIdRef.current}/messages?userId=${userId}`;
+                getApiNotBody(messageHistoryUrl).then((response) => {
+                    console.log(response);
+                    // 处理历史消息
+                    response.data.forEach((message) => {
+                        handleMessageHistory(message.textContent, message.senderType === "character" ? "ai" : "user");
+                    })
+                }).catch((_) => {
+                    alert('获取对话历史失败，请稍后重试');
+                })
+            }
         }).catch((_) => {
-            alert('创建对话失败，请稍后重试');
+            alert('获取对话历史失败，请稍后重试');
         })
-      
+
+        
+        // const url = `${process.env.REACT_APP_API_BASE_URL}/api/conversations?userId=${userId}&characterId=${roleplayDetailedInformation.id}&title=与${roleplayDetailedInformation.name}的对话`;
+        // createConversationPost(url).then((response) => {
+        //     setConversationId(response.data.conversation.id);
+        //     setCharacterId(response.data.conversation.characterId);
+        //     handleMessageHistory(response.data.opening, "ai");
+
+        //     // 激活对话
+        //     const activeUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${response.data.conversation.id}/activate?userId=${userId}`;
+        //     activeConversationPost(activeUrl).catch((_) => {
+        //     alert('激活对话失败，请稍后重试');
+        // })
+        // }).catch((_) => {
+        //     alert('创建对话失败，请稍后重试');
+        // })
+
     }, [roleplayDetailedInformation]);
 
 
@@ -40,12 +78,13 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
     };
 
     const scrollButtom = () => {
-        messagesEndRef.current?.scrollIntoView({behavior: "smooth"})
+        messagesEndRef.current?.scrollIntoView({behavior: "auto"})
     };
 
     useEffect(()=>{
         scrollButtom();
     },[messagesHistory])
+
 
   const handleMessageHistory = (result, sender) =>{
         setMessagesHistory((prevMessages) => [ 
@@ -77,7 +116,6 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
 
     const handleSendMessageResponse = useCallback(async(url, message) => {
         try {
-            // const responseId = messagesHistory[messagesHistory.length-1].id + 1
             let responseId
             setMessagesHistory((prev) => {
                 responseId = prev.length > 0 ? prev[prev.length - 1].id + 1 : 1;
@@ -159,7 +197,7 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
                 streamControllerRef.current = null;
             }
         }
-    }, [characterId, userId, messagesHistory]);
+    }, [characterId, userId]);
 
 
 
@@ -210,8 +248,7 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
                     </div>
                     <div className='roleplay-detail-container'>
                         <div className='AI-role-Name'>{roleplayDetailedInformation?.name || 'AI角色'}</div>
-                        <div className='AI-role-builder'>由 @{roleplayDetailedInformation?.builder || '系统'} 创建</div>
-                        <div className='AI-role-likeNumber'>{roleplayDetailedInformation?.likeCount || 0} 次互动</div>
+                        <div className='AI-role-builder'>{roleplayDetailedInformation?.title}</div>
                     </div>
                 </div>
 

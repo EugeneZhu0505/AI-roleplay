@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import RoleplayCardItem from './roleplayCardItem';
 import './styles/roleplayCardItemSlide.css';
+import React from "react";
 
 
-const RoleplayListSlide = (props) => {
+const RoleplayListSlide = React.memo((props) => {
     const [itemsPerPage, setItemsPerPage] = useState(4);
     const [visibleItems, setVisibleItems] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,7 +47,6 @@ const RoleplayListSlide = (props) => {
                             builder: "admin",
                             desc: roleplayItem.description,
                             likeCount: "10M",
-                            handleRoleplayCardClick: props.handleRoleplayCardClick,
                     }} />
                 ))}
             </div>
@@ -55,6 +55,6 @@ const RoleplayListSlide = (props) => {
             </div>
         </div>
     );
-};
+});
 
 export default RoleplayListSlide;

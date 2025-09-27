@@ -12,11 +12,25 @@
     border-radius: 10px;
     cursor: pointer;
     user-select: none;
-    margin-top:4px
+    margin-top:4px;
+    justify-content: space-between;
+}
+
+.roleplay-history-card-container.selected{
+    background-color: #afafafd3;
 }
 
 .roleplay-history-card-container:hover{
-    background-color: #9e9d9dd3;
+    background-color: #d3d1d1d3;
+    .roleplay-history-list-item-more-func-container{
+        display: flex;
+    }
+}
+
+.roleplay-history-list-item-content{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
 .roleplay-history-list-item-avatar{
@@ -31,4 +45,24 @@
     font-weight: 400;
     color: #292929;
     margin-left: 10px;
+}
+
+.roleplay-history-list-item-more-func-container{
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    background-color: transparent;
+    border-radius: 50%;
+    margin-right: 10px;
+
+}
+.roleplay-history-list-item-more-func-container:hover{
+    background-color: #afafafd3;
+}
+
+.roleplay-history-list-item-more-func{
+    width: 15px;
+    height: 15px;
 }
