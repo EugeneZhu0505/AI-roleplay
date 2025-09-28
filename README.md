@@ -70,6 +70,8 @@ mvn clean package -DskipTests
 java -jar target/ai-roleplay-0.0.1-SNAPSHOT.jar
 ```
 
+[jar包链接](https://pan.baidu.com/s/10Zdz5Odj6Uqwt8-cb6xRPQ?pwd=am1h)
+
 ### 使用IDE启动
 1. 打开IDEA，导入backend项目
 2. 找到 `com.hzau.BackendApplication` 主类
