@@ -1,15 +1,14 @@
 import './styles/roleplayHistoryListItem.css'
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import {SelectedAICharacter, HistoryAICharacter} from './utils/historyAICharacter';
 import {deleteConversationPost} from './utils/api';
 
 const RoleplayHistoryListItem = ({roleplay}) => {
     const {selectedRoleplay, setSelectedRoleplay, setIsChat} = useContext(SelectedAICharacter);
     const {chatHistoryCharacters, setChatHistoryCharacters} = useContext(HistoryAICharacter);
-     const userId = JSON.parse(localStorage.getItem("login-success-user")).userId;
+    const userId = JSON.parse(localStorage.getItem("login-success-user")).userId;
 
     const handleClickHistoryItem = () => {
-
         setSelectedRoleplay({
             conversationId: roleplay.conversationId,
             characterId: roleplay.characterId,
@@ -22,6 +21,7 @@ const RoleplayHistoryListItem = ({roleplay}) => {
     }
 
     const handleClickMoreFunc = () => {
+
         const deleteUrl = `${process.env.REACT_APP_API_BASE_URL}/api/conversations/${roleplay.conversationId}?userId=${userId}`;
         deleteConversationPost(deleteUrl).then(res => {
             setChatHistoryCharacters(chatHistoryCharacters.filter(item => item.conversationId !== roleplay.conversationId));
@@ -29,6 +29,8 @@ const RoleplayHistoryListItem = ({roleplay}) => {
             alert(`删除失败, ${err.message}`);
         })
     }
+
+
 
 
     return(

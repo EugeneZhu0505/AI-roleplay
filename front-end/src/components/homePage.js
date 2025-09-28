@@ -7,6 +7,8 @@ import RoleplayHistoryList from './roleplayHistoryList';
 import RoleplaySpeech from './roleyplaySpeech';
 import { HistoryAICharacter, SelectedAICharacter } from './utils/historyAICharacter';
 
+
+
 const callingCoversationDetail = {
     conversationId: -1,
     userId: -1,
@@ -46,17 +48,11 @@ function HomePage() {
     }
 
     const addChatHistoryCharacter = (character) => {
-        const existingIndex = chatHistoryCharacters.findIndex(
-            (item) => item.id === character.id
-        )
-        
-        if (existingIndex === -1) {
-            let updatedCharacters;
-            updatedCharacters = [...chatHistoryCharacters];
-            updatedCharacters.unshift(character);
-            setChatHistoryCharacters(updatedCharacters);
-        }
-
+        let updatedCharacters;
+        updatedCharacters = [...chatHistoryCharacters];
+        updatedCharacters.unshift(character);
+        console.log(updatedCharacters);
+        setChatHistoryCharacters(updatedCharacters);
     }
 
     const handleSearchChange = (e) => {
@@ -109,7 +105,7 @@ function HomePage() {
                     </button>
                 </div>
 
-                <div className="sidebar-create-container">
+                <div className="sidebar-create-container" onClick={() => navigate('/create')}>
                     <img src={require("../imgs/create.png")} className='sidebar-create-icon'/>
                     <p className='sidebar-create-text'>创建</p>
                 </div>

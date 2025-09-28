@@ -5,7 +5,7 @@ import React from "react";
 
 const RoleplayCardItem = (props) => {
 
-    const {selectedRoleplay, setSelectedRoleplay, setIsChat} = useContext(SelectedAICharacter);
+    const {setSelectedRoleplay, setIsChat} = useContext(SelectedAICharacter);
 
     const handleClick = () => {
         setSelectedRoleplay({
@@ -13,6 +13,7 @@ const RoleplayCardItem = (props) => {
             cover: props.roleplay.cover,
             name: props.roleplay.name,
             description: props.roleplay.desc,
+            personality: props.roleplay.personality,
         })
         setIsChat(true);
     }

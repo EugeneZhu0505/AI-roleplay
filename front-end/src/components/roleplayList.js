@@ -1,8 +1,10 @@
 import "./styles/roleplayList.css"
 import { useState, useEffect, useCallback } from 'react';
 import RoleplayListSlide from './roleplayCardItemSlide';
+import AudioSlide from './audioSlide';
 import { getApiNotBody } from './utils/api';
 import React from "react";
+import RoleplaySearchItem from './roleplaySearchItem';
 
 
 const RoleplayList = React.memo((props) => {
@@ -11,7 +13,12 @@ const RoleplayList = React.memo((props) => {
     const [roleplayList, setRoleplayList] = useState([]);
     const [isLoadingRecommend, setIsLoadingRecommend] = useState(true); 
     const [isLoadingCategory, setIsLoadingCategory] = useState(true);
+    const [isLoadingAudio, setIsLoadingAudio] = useState(true);
     const [categoryRoleplayList, setCategoryRolePlayList] = useState([]);
+    const [audioList, setAudioList] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [category, setCategory] = useState(0);
 
     useEffect(() => {
         const loginSuccessUser = localStorage.getItem("login-success-user");
@@ -33,9 +40,23 @@ const RoleplayList = React.memo((props) => {
         }
         handleGetRoleplayListResonse();
         handleGetCategoryRoleplayResponse(0);
+
+
+        const handleGetCharacterAudio = async () =>{
+            try{
+                setIsLoadingAudio(true);
+                const audioList = await getApiNotBody(`${process.env.REACT_APP_API_BASE_URL}/api/conversations/characters/opening-audios`);
+                setAudioList(Object.values(audioList.data));
+                setIsLoadingAudio(false);
+            }catch (error){
+                console.error('获取角色开场白失败:', error);
+            }
+        }
+        handleGetCharacterAudio();
     }, []);
 
     const handleGetCategoryRoleplayResponse = useCallback(async (category) =>{
+        setCategory(category);
         try{
             setIsLoadingCategory(true); 
             const roleplayList = await getApiNotBody(`${process.env.REACT_APP_API_BASE_URL}/api/characters/category/${category}`);
@@ -46,15 +67,15 @@ const RoleplayList = React.memo((props) => {
         }
     })
 
+    const handleOnSearch = useCallback(async (e) => {
+        if (e.key === 'Enter') {
+            if (searchTerm.trim() !== '') {
+                const searchCharacter = await getApiNotBody(`${process.env.REACT_APP_API_BASE_URL}/api/characters/search?name=${searchTerm}`);
+                setSearchResults(searchCharacter.data);
+            }
+        }
+    }, [roleplayList, searchTerm]);
 
-    // const handleGetCharacterGreeting = useCallback(async () =>{
-    //     try{
-    //         const greeting = await getCharacterGreeting(`${process.env.REACT_APP_API_BASE_URL}/api/characters/${characterId}/greeting`);
-    //         return greeting.data;
-    //     }catch (error){
-    //         console.error('获取角色开场白失败:', error);
-    //     }
-    // }, [])
 
     return(
         <div className="roleplayList-container">
@@ -72,11 +93,22 @@ const RoleplayList = React.memo((props) => {
                         </div>
                     </div>
                 </div>
+
                 <div className="roleplayList-header-search-container">
-                    <img className="roleplayList-header-search-icon" src={require("../imgs/search-icon.png")}/>
-                    <input className="roleplayList-header-search" type="text" placeholder="搜索" />
+                    <div className="roleplayList-header-search-line">
+                        <img className="roleplayList-header-search-icon" src={require("../imgs/search-icon.png")}/>
+                        <input className="roleplayList-header-search" type="text" placeholder="搜索" onChange={(e) => setSearchTerm(e.target.value)} onKeyDown={handleOnSearch}/>
+                    </div>
+                    { searchTerm && (
+                    <div className="search-results-container">
+                        {searchResults.map(result => (
+                            <RoleplaySearchItem key={result.id} searchItem={result}/>
+                        ))}
+                    </div>
+                    )}
                 </div>
             </div>
+                
 
             {/** 热门推荐角色列表 */}
             <div className="roleplayList-recommend-container">
@@ -97,10 +129,10 @@ const RoleplayList = React.memo((props) => {
             {/** 分类列表 */}
             <div className="roleplayList-category-container">
                 <div className="roleplayList-category-button-container">
-                    <button className="roleplayList-category-button" key="0" onClick={() => handleGetCategoryRoleplayResponse(0)}>动漫</button>
-                    <button className="roleplayList-category-button" key="1" onClick={() => handleGetCategoryRoleplayResponse(1)}>影视</button>
-                    <button className="roleplayList-category-button" key="2" onClick={() => handleGetCategoryRoleplayResponse(2)}>历史</button>
-                    <button className="roleplayList-category-button" key="3" onClick={() => handleGetCategoryRoleplayResponse(3)}>科普</button>
+                    <button className={`roleplayList-category-button ${category === 0 ? 'active' : ''}`} key="0" onClick={() => handleGetCategoryRoleplayResponse(0)}>动漫</button>
+                    <button className={`roleplayList-category-button ${category === 1 ? 'active' : ''}`} key="1" onClick={() => handleGetCategoryRoleplayResponse(1)}>影视</button>
+                    <button className={`roleplayList-category-button ${category === 2 ? 'active' : ''}`} key="2" onClick={() => handleGetCategoryRoleplayResponse(2)}>历史</button>
+                    <button className={`roleplayList-category-button ${category === 3 ? 'active' : ''}`} key="3" onClick={() => handleGetCategoryRoleplayResponse(3)}>科普</button>
                 </div>
 
                 <div className="roleplayList-category-list-container">
@@ -120,10 +152,12 @@ const RoleplayList = React.memo((props) => {
                     语音
                 </div>
                 <div className="rolepalyList-voice-list-container">
-                    
+                    {isLoadingAudio ?
+                    (<p>角色列表加载中...</p>):
+                    <AudioSlide  audioList={audioList}/>
+                    }
                 </div>
-
-                
+   
             </div>
 
         </div>

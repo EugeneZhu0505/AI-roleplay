@@ -66,3 +66,14 @@
     width: 15px;
     height: 15px;
 }
+
+.roleplay-history-list-item-more-func-content{
+    position: relative;
+    top: 10px;
+    left: 20px;
+    width: 100px;
+    height: 40px;
+    z-index: 1000;
+    overflow: visible;
+}
+
