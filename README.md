@@ -1,6 +1,7 @@
 # AI-roleplay
 
 AI角色扮演网站，基于Spring Boot WebFlux + React的全栈项目。
+[项目演示视频](https://pan.baidu.com/s/1wUzuLKdVm3tBta2M-pLDag?pwd=tf56)
 
 ## 项目结构
 
