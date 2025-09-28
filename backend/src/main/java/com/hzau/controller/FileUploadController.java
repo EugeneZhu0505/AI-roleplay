@@ -8,9 +8,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -61,72 +68,113 @@ public class FileUploadController {
 
     /**
      * 通用文件上传接口
+     * @param fileMono
+     * @param category
+     * @return
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "通用文件上传", description = "支持图片、音频、视频、文档等多种文件类型上传")
-    public Result<Map<String, Object>> uploadFile(
+    public Mono<Result<Map<String, Object>>> uploadFile(
             @Parameter(description = "上传的文件", required = true)
-            @RequestParam("file") MultipartFile file,
+            @RequestPart("file") Mono<FilePart> fileMono,
             @Parameter(description = "文件类型分类", example = "image")
-            @RequestParam(required = false) String category) {
+            @RequestPart(value = "category", required = false) String category) {
 
-        log.info("收到文件上传请求，文件名: {}, 大小: {} bytes, 分类: {}",
-                file.getOriginalFilename(), file.getSize(), category);
+        return fileMono.flatMap(file -> {
+            try {
+                log.info("收到文件上传请求，文件名: {}, 分类: {}",
+                        file.filename(), category);
 
-        try {
-            // 1. 基本验证
-            if (file.isEmpty()) {
-                return Result.fail(400, "上传文件不能为空");
+                // 1. 基本验证
+                 String originalFilename = file.filename();
+                 if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                     return Mono.just(Result.<Map<String, Object>>fail(400, "文件名不能为空"));
+                 }
+
+                 // 2. 获取文件扩展名
+                 String fileExtension = getFileExtension(originalFilename).toLowerCase();
+                 if (fileExtension.isEmpty()) {
+                     return Mono.just(Result.<Map<String, Object>>fail(400, "文件必须有扩展名"));
+                 }
+
+                 // 3. 自动检测文件类型（如果未指定分类）
+                 String finalCategory = category;
+                 if (finalCategory == null || finalCategory.trim().isEmpty()) {
+                     finalCategory = detectFileCategory(fileExtension);
+                     if (finalCategory == null) {
+                         return Mono.just(Result.<Map<String, Object>>fail(400, "不支持的文件类型: " + fileExtension));
+                     }
+                 }
+
+                // 创建临时文件来保存上传的文件内容
+                Path tempFile = Files.createTempFile("upload_", "_" + originalFilename);
+                String finalCategoryForLambda = finalCategory;
+                
+                // 将FilePart内容写入临时文件并获取字节数组
+                return file.transferTo(tempFile)
+                    .then(Mono.fromCallable(() -> {
+                        byte[] fileBytes = Files.readAllBytes(tempFile);
+                        long fileSize = fileBytes.length;
+                        
+                        // 清理临时文件
+                        Files.deleteIfExists(tempFile);
+                        
+                        return new Object[]{fileBytes, fileSize, originalFilename};
+                    }))
+                    .flatMap(fileData -> {
+                        byte[] fileBytes = (byte[]) ((Object[]) fileData)[0];
+                        long fileSize = (long) ((Object[]) fileData)[1];
+                        String fileName = (String) ((Object[]) fileData)[2];
+                        
+                        try {
+                            log.info("处理文件上传，文件名: {}, 大小: {} bytes, 分类: {}",
+                                    fileName, fileSize, finalCategoryForLambda);
+
+                            // 4. 验证文件大小
+                             Long maxSize = MAX_FILE_SIZES.get(finalCategoryForLambda);
+                             if (maxSize != null && fileSize > maxSize) {
+                                 return Mono.just(Result.<Map<String, Object>>fail(400, 
+                                     String.format("文件大小超出限制，最大允许: %s，当前文件: %s", 
+                                         formatFileSize(maxSize), formatFileSize(fileSize))));
+                             }
+
+                             // 5. 验证文件类型
+                             List<String> supportedTypes = SUPPORTED_FILE_TYPES.get(finalCategoryForLambda);
+                             if (supportedTypes == null || !supportedTypes.contains(fileExtension)) {
+                                 return Mono.just(Result.<Map<String, Object>>fail(400, 
+                                     String.format("不支持的文件类型: %s，支持的类型: %s", 
+                                         fileExtension, supportedTypes)));
+                             }
+
+                            // 6. 保存文件
+                            String fileUrl = fileStorageService.saveFileBytes(fileBytes, fileName, finalCategoryForLambda);
+
+                            // 7. 构建响应
+                            Map<String, Object> result = new HashMap<>();
+                            result.put("fileUrl", fileUrl);
+                            result.put("fileName", fileName);
+                            result.put("fileSize", fileSize);
+                            result.put("fileType", fileExtension);
+                            result.put("category", finalCategoryForLambda);
+                            result.put("uploadTime", System.currentTimeMillis());
+
+                            log.info("文件上传成功，URL: {}", fileUrl);
+                            return Mono.just(Result.success(result));
+
+                        } catch (Exception e) {
+                             log.error("文件保存失败", e);
+                             return Mono.just(Result.<Map<String, Object>>fail(500, "文件保存失败: " + e.getMessage()));
+                         }
+                    });
+                    
+            } catch (IOException e) {
+                log.error("创建临时文件失败", e);
+                return Mono.just(Result.<Map<String, Object>>fail(500, "文件处理失败: " + e.getMessage()));
             }
-
-            String originalFilename = file.getOriginalFilename();
-            if (originalFilename == null || originalFilename.trim().isEmpty()) {
-                return Result.fail(400, "文件名不能为空");
-            }
-
-            // 2. 获取文件扩展名
-            String fileExtension = getFileExtension(originalFilename).toLowerCase();
-            if (fileExtension.isEmpty()) {
-                return Result.fail(400, "文件必须有扩展名");
-            }
-
-            // 3. 自动检测文件类型（如果未指定分类）
-            if (category == null || category.trim().isEmpty()) {
-                category = detectFileCategory(fileExtension);
-                if (category == null) {
-                    return Result.fail(400, "不支持的文件类型: " + fileExtension);
-                }
-            }
-
-            log.info("收到文件上传请求，文件名: {}, 大小: {} bytes, 分类: {}",
-                    originalFilename, file.getSize(), category);
-
-            // 4. 验证文件类型和大小
-            Result<String> validationResult = validateFile(file, fileExtension, category);
-            if (validationResult.getCode() != 0) {
-                return Result.fail(validationResult.getCode(), validationResult.getMessage());
-            }
-
-            // 5. 上传文件
-            String fileUrl = fileStorageService.uploadFile(file, category);
-
-            // 6. 构建响应
-            Map<String, Object> result = new HashMap<>();
-            result.put("fileUrl", fileUrl);
-            result.put("fileName", originalFilename);
-            result.put("fileSize", file.getSize());
-            result.put("fileType", fileExtension);
-            result.put("category", category);
-            result.put("contentType", file.getContentType());
-            result.put("uploadTime", System.currentTimeMillis());
-
-            log.info("文件上传成功，URL: {}", fileUrl);
-            return Result.success(result);
-
-        } catch (Exception e) {
-            log.error("文件上传失败", e);
-            return Result.fail(500, "文件上传失败: " + e.getMessage());
-        }
+        }).onErrorResume(error -> {
+            log.error("文件上传处理失败", error);
+            return Mono.just(Result.<Map<String, Object>>fail(500, "文件上传失败"));
+        });
     }
 
     /**
@@ -136,19 +184,19 @@ public class FileUploadController {
     @Operation(summary = "批量文件上传", description = "支持一次上传多个文件")
     public Result<Map<String, Object>> uploadFiles(
             @Parameter(description = "上传的文件列表", required = true)
-            @RequestParam("files") MultipartFile[] files,
+            @RequestPart("files") MultipartFile[] files,
             @Parameter(description = "文件类型分类")
-            @RequestParam(required = false) String category) {
+            @RequestPart(value = "category", required = false) String category) {
 
         log.info("收到批量文件上传请求，文件数量: {}, 分类: {}", files.length, category);
 
         try {
             if (files.length == 0) {
-                return Result.fail(400, "请选择要上传的文件");
+                return Result.<Map<String, Object>>fail(400, "请选择要上传的文件");
             }
 
             if (files.length > 10) {
-                return Result.fail(400, "单次最多上传10个文件");
+                return Result.<Map<String, Object>>fail(400, "单次最多上传10个文件");
             }
 
             List<Map<String, Object>> successList = new java.util.ArrayList<>();
@@ -225,7 +273,7 @@ public class FileUploadController {
 
         } catch (Exception e) {
             log.error("批量文件上传失败", e);
-            return Result.fail(500, "批量文件上传失败: " + e.getMessage());
+            return Result.<Map<String, Object>>fail(500, "批量文件上传失败: " + e.getMessage());
         }
     }
 
@@ -339,13 +387,13 @@ public class FileUploadController {
         // 检查文件类型
         List<String> allowedExtensions = SUPPORTED_FILE_TYPES.get(category);
         if (allowedExtensions == null || !allowedExtensions.contains(fileExtension)) {
-            return Result.fail(400, "不支持的文件类型: " + fileExtension + "，分类: " + category);
+            return Result.<String>fail(400, "不支持的文件类型: " + fileExtension + "，分类: " + category);
         }
 
         // 检查文件大小
         Long maxSize = MAX_FILE_SIZES.get(category);
         if (maxSize != null && file.getSize() > maxSize) {
-            return Result.fail(400, "文件大小超出限制，最大允许: " + formatFileSize(maxSize) +
+            return Result.<String>fail(400, "文件大小超出限制，最大允许: " + formatFileSize(maxSize) +
                     "，当前文件: " + formatFileSize(file.getSize()));
         }
 

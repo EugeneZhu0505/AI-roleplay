@@ -68,7 +68,9 @@ public class SecurityConfig {
                         .pathMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/webjars/**").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/error").permitAll()
-                        .pathMatchers("/files/**").permitAll()
+                        .pathMatchers("/files/**").permitAll()  // 静态文件访问
+                        // API接口需要认证
+                        .pathMatchers("/api/files/**").authenticated()
                         // 其他所有请求都需要认证
                         .anyExchange().authenticated()
                 )

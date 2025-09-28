@@ -112,6 +112,36 @@ public class FileStorageService {
         return fileUrl;
     }
 
+    /**
+     * 保存文件字节数组到本地（通用方法）
+     */
+    public String saveFileBytes(byte[] fileBytes, String originalFilename, String category) throws IOException {
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new RuntimeException("文件数据为空");
+        }
+        
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new RuntimeException("文件名为空");
+        }
+
+        // 生成文件名和路径
+        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+        String fileName = generateUniqueFileName() + fileExtension;
+        String uploadDir = createUploadDirectory(category);
+        String filePath = uploadDir + File.separator + fileName;
+
+        // 保存文件
+        File targetFile = new File(filePath);
+        Files.write(targetFile.toPath(), fileBytes);
+
+        // 生成访问URL
+        String fileUrl = generateFileUrl(category, fileName);
+
+        log.info("文件字节数组保存成功: {} -> {} (分类: {}, 大小: {} bytes)", 
+                originalFilename, fileUrl, category, fileBytes.length);
+        return fileUrl;
+    }
+
 
     /**
      * 上传音频文件

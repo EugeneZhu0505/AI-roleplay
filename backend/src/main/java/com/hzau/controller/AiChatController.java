@@ -37,6 +37,7 @@ public class AiChatController {
 
     /**
      * 检查AI服务配置状态
+     * @return
      */
     @GetMapping("/status")
     @Operation(summary = "检查AI服务状态", description = "检查API密钥配置是否正确")
@@ -48,8 +49,11 @@ public class AiChatController {
         ));
     }
 
+
     /**
      * 单次对话
+     * @param request
+     * @return
      */
     @PostMapping("/chat/single")
     @Operation(summary = "单次对话", description = "发送单条消息给AI并获取回复")
@@ -76,8 +80,12 @@ public class AiChatController {
                 .onErrorReturn(Result.fail(ErrorCode.ERROR400.getCode(), "AI服务调用失败，请稍后重试"));
     }
 
+
     /**
      * 多轮对话
+     * @param conversationId
+     * @param request
+     * @return
      */
     @PostMapping("/chat/multi/{conversationId}")
     @Operation(summary = "多轮对话", description = "在指定会话中发送消息")
@@ -106,8 +114,11 @@ public class AiChatController {
                 .onErrorReturn(Result.fail(ErrorCode.ERROR500.getCode(), "AI服务调用失败，请稍后重试"));
     }
 
+
     /**
      * 获取会话历史
+     * @param conversationId
+     * @return
      */
     @GetMapping("/chat/history/{conversationId}")
     @Operation(summary = "获取会话历史", description = "获取指定会话的消息历史")
@@ -119,8 +130,11 @@ public class AiChatController {
         return Result.success(history);
     }
 
+
     /**
-     * 清除会话历史
+     * 清除某个会话的历史聊天
+     * @param conversationId
+     * @return
      */
     @DeleteMapping("/chat/history/{conversationId}")
     @Operation(summary = "清除会话历史", description = "清除指定会话的所有消息历史")
@@ -132,8 +146,11 @@ public class AiChatController {
         return Result.success("会话历史已清除");
     }
 
+
     /**
-     * 流式单次对话
+     * 单次对话
+     * @param request
+     * @return
      */
     @PostMapping(value = "/chat/single/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "流式单次对话", description = "发送单条消息给AI并获取流式回复")
@@ -169,8 +186,12 @@ public class AiChatController {
                 });
     }
 
+
     /**
      * 流式多轮对话
+     * @param conversationId
+     * @param request
+     * @return
      */
     @PostMapping(value = "/chat/multi/{conversationId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "流式多轮对话", description = "在指定会话中发送消息并获取流式回复")
@@ -210,6 +231,7 @@ public class AiChatController {
 
     /**
      * 测试接口 - 快速验证功能
+     * @return
      */
     @GetMapping("/test")
     @Operation(summary = "快速测试", description = "发送测试消息验证AI服务是否正常")

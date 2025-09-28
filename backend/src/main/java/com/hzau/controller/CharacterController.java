@@ -34,6 +34,7 @@ public class CharacterController {
 
     /**
      * 获取所有激活的角色列表
+     * @return
      */
     @GetMapping
     @Operation(summary = "获取角色列表", description = "获取所有激活的AI角色列表")
@@ -49,6 +50,8 @@ public class CharacterController {
 
     /**
      * 根据ID获取角色详情
+     * @param characterId
+     * @return
      */
     @GetMapping("/{characterId}")
     @Operation(summary = "获取角色详情", description = "根据ID获取指定角色的详细信息")
@@ -69,6 +72,8 @@ public class CharacterController {
 
     /**
      * 根据名称搜索角色
+     * @param name
+     * @return
      */
     @GetMapping("/search")
     @Operation(summary = "搜索角色", description = "根据名称关键词搜索角色")
@@ -84,8 +89,11 @@ public class CharacterController {
         }
     }
 
+
     /**
-     * 根据标签搜索角色
+     * 按标签搜索角色
+     * @param tag
+     * @return
      */
     @GetMapping("/search/tag")
     @Operation(summary = "按标签搜索角色", description = "根据标签关键词搜索角色")
@@ -101,8 +109,11 @@ public class CharacterController {
         }
     }
 
+
     /**
-     * 创建新的AI角色
+     * 创建AI角色
+     * @param request
+     * @return
      */
     @PostMapping
     @Operation(summary = "创建AI角色", description = "创建一个新的AI角色")
@@ -126,8 +137,11 @@ public class CharacterController {
         }
     }
 
+
     /**
-     * 根据分类获取角色列表
+     * 按分类获取角色
+     * @param category
+     * @return
      */
     @GetMapping("/category/{category}")
     @Operation(summary = "按分类获取角色", description = "根据分类获取角色列表 (0-动漫, 1-影视, 2-历史, 3-科普)")
