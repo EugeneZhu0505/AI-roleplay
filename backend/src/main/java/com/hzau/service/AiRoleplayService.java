@@ -435,7 +435,7 @@ public class AiRoleplayService {
         }
         // 添加当前用户消息
         context.append("用户：").append(currentMessage).append("\n");
-        context.append("请以").append(character.getName()).append("的身份回复用户，保持角色一致性。");
+        context.append("请以").append(character.getName()).append("的身份回复用户，保持角色一致性。注意回复只涉及对话信息，不要出现内心戏等无法语言输出的内容。");
 
         return Mono.just(context.toString());
     }
