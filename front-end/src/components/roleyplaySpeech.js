@@ -187,20 +187,17 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
         } 
         else if (callStatus === CALL_STATUS.PLAYING_SERVER_AUDIO) {
             // B. 播放状态：检测用户是否抢占说话
-            if (currentDb >= SILENCE_THRESHOLD + 6) { 
+            if (currentDb >= SILENCE_THRESHOLD + 10) { 
                 // 核心抢占逻辑
                 if (audioRef.current) audioRef.current.pause(); 
                 if (recorderRef.current) recorderRef.current.resumeRecording();
-                setHasSpoken(true);
                 setCallStatus(CALL_STATUS.RECORDING);
-                
-                // // VAD 循环将会在下一帧的 RECORDING 状态下继续运行
-                // return; 
+                setHasSpoken(true);          
             }
         }
         else if (callStatus === CALL_STATUS.IDLE) {
             // C. 空闲状态：检测用户是否开始说话
-            if (currentDb >= SILENCE_THRESHOLD + 6) {
+            if (currentDb >= SILENCE_THRESHOLD + 10) {
                 // 核心优化：直接开始录音，无需等待静音
                 if (recorderRef.current) recorderRef.current.resumeRecording();
                 setCallStatus(CALL_STATUS.RECORDING);
@@ -212,17 +209,17 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
     }, [stopRecordingAndProcess]);
 
 
-    // --- IV. 播放结束回调 ---
-    const handleAudioEnded = () => {
-        // 播放完毕且用户未抢占
+    // // --- IV. 播放结束回调 ---
+    // const handleAudioEnded = () => {
+    //     // 播放完毕且用户未抢占
         
-        // 核心优化：恢复录制，继续捕捉用户语音
-        if (recorderRef.current) {
-            recorderRef.current.resumeRecording();
-        }
+    //     // 核心优化：恢复录制，继续捕捉用户语音
+    //     if (recorderRef.current) {
+    //         recorderRef.current.resumeRecording();
+    //     }
         
-        setCallStatus(CALL_STATUS.RECORDING);
-    };
+    //     setCallStatus(CALL_STATUS.RECORDING);
+    // };
 
     // --- 生命周期和清理 ---
     const closeSpeech = () => {
@@ -295,7 +292,7 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
                 {/* 隐藏的 <audio> 标签用于控制播放 */}
                 <audio 
                     ref={audioRef} 
-                    onEnded={handleAudioEnded} 
+                    // onEnded={handleAudioEnded} 
                     style={{ display: 'none' }}
                 />
 

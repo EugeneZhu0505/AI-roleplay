@@ -8,7 +8,6 @@
  * @returns {Promise} - 服务器响应数据
  */
 
-
 export const RegisterPost = async (url, body) => {
   try {
       const response = await fetch(url, {
@@ -49,9 +48,9 @@ export const LoginPost = async (url, body) => {
 }
 
 
-// 获取角色列表
-export const getRoleplayList = async (url) => {
-  try{
+// 无body的getAPI
+export const getApiNotBody = async(url) => {
+    try{
     const response = await fetch(url,{
       method: 'GET',
       headers: {
@@ -68,6 +67,11 @@ export const getRoleplayList = async (url) => {
     throw error;
   }
 }
+
+
+
+
+
 
 
 // 创建新对话
@@ -145,6 +149,9 @@ export const sendAudioPost = async (url, body) => {
     }
 
     const data = await response.json();
+    if(data.data.aiAudioUrl === null){
+      throw new Error(`HTTP错误: 状态码 ${response.status}`);
+    }
     return data.data.aiAudioUrl;
 
   } catch (error) {
@@ -152,3 +159,25 @@ export const sendAudioPost = async (url, body) => {
     throw error;
   }
 }
+
+// 删除对话
+export const deleteConversationPost = async (url) => {
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'accessToken' : JSON.parse(localStorage.getItem("login-success-user")).accessToken,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP错误: 状态码 ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    throw error;
+  }
+}
+
+
+

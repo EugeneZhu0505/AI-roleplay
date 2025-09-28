@@ -20,6 +20,7 @@
     align-items: start;
     justify-content: start;
     background-color: transparent;
+    overflow-x: visible;
 }
 
 .roleplay-history-list-item-container::-webkit-scrollbar {

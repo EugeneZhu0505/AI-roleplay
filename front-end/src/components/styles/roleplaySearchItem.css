@@ -1,0 +1,63 @@
+.roleplaySearchItem-container {
+    display: flex;
+    align-items: center;
+    height: 70px;
+    margin-top: 20px;
+    width: 90%;
+    margin-left: 15px;
+    border-radius: 10px;
+}
+
+.roleplaySearchItem-container:hover {
+    background-color: #b9b7b7;
+}
+
+.roleplaySearchItem-character-avatar {
+    margin-left: 10px;
+    width: 60px;
+    height: 60px;
+    border-radius: 15%;
+    margin-right: 10px;
+}
+
+.roleplaySearchItem-character-text {
+    display: flex;
+    flex-direction: column;
+    margin-left: 5px;
+}
+
+.roleplaySearchItem-character-name {
+    font-size: 16px;
+    font-weight: 500;
+    line-clamp: 1; 
+    overflow: hidden;
+    margin-left: 5px;
+}
+
+.roleplaySearchItem-character-desription {
+    font-size: 12px;
+    color: #666;
+    line-clamp: 1; 
+    overflow: hidden;
+    height: 17px; 
+    text-overflow: ellipsis;
+    margin-top: 5px;
+    margin-left: 5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+    
+.roleplaySearchItem-character-personality {
+    font-size: 12px;
+    color: #666;
+    line-clamp: 1; 
+    overflow: hidden;
+    height: 15px; 
+    text-overflow: ellipsis;
+    margin-top: 5px;
+    margin-left: 5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}

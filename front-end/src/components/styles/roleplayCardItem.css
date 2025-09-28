@@ -1,6 +1,5 @@
 .roleplay-card-item-container {
     display:flex;
-    justify-items: center;
     height:166px;
     width:312px;
     background-color: rgba(224, 224, 224, 0.515);
@@ -57,6 +56,9 @@
     overflow: hidden;
     height: 55px; 
     width: 145px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
 }
 
 .roleplay-card-item-text-like-container{

@@ -1,18 +1,21 @@
 import "./styles/roleplayCardItem.css"
-
+import { useContext } from 'react';
+import {HistoryAICharacter, SelectedAICharacter} from './utils/historyAICharacter';
+import React from "react";
 
 const RoleplayCardItem = (props) => {
 
+    const {setSelectedRoleplay, setIsChat} = useContext(SelectedAICharacter);
 
     const handleClick = () => {
-        props.roleplay.handleRoleplayCardClick({
-            key: props.roleplay.id,
+        setSelectedRoleplay({
+            characterId: props.roleplay.id,
             cover: props.roleplay.cover,
             name: props.roleplay.name,
-            builder: props.roleplay.builder,
-            desc: props.roleplay.desc,
-            likeCount: props.roleplay.likeCount,
+            description: props.roleplay.desc,
+            personality: props.roleplay.personality,
         })
+        setIsChat(true);
     }
 
 
@@ -41,6 +44,6 @@ const RoleplayCardItem = (props) => {
             </div>
         </div>
     )
-}
+};
 
 export default RoleplayCardItem;

@@ -5,17 +5,19 @@
     display: flex;
     flex-direction: column;
     margin-left: 3%;
+    
 }
 
 
 .roleplayList-header{
-    width: 70%;
+    width: 80%;
     height: 60px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 50px;
     margin-top:20px;
+    position: relative;
 }
 
 .roleplayList-header-welcome-comtainer{
@@ -36,8 +38,8 @@
 }
 
 .roleplayList-header-user-img{
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
     margin-right: 8px;
     margin-top: 4px;
     border-radius: 50px;
@@ -49,18 +51,49 @@
 }
 
 .roleplayList-header-search-container{
-    width: 350px;
+    position: relative;
+    width:40%;
     height: 45px;
     border-radius: 20px;
     display: flex;
-    align-items: center;
     padding: 0 10px;
-    background-color: #e2e2e3;
+    background-color: #cacacc;
+    user-select: none;
+    outline: none;
+    border: none;
+    flex-direction: column;
+}
+
+.roleplayList-header-search-line{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    border: none;
+    outline: none;
+    align-items: center;
+}
+
+.search-results-container{
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width:100%;
+    height: 400px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    z-index: 10000;
+    background-color: #eaeaed;
+    border-radius: 20px;
+    border-top: 1.2px solid rgba(179, 176, 176, 0.819);
+    overflow-y: auto;
 }
 
 .roleplayList-header-search-icon{
     width: 20px;
     height: 20px;
+    user-select: none;
 }
 
 .roleplayList-header-search{
@@ -70,42 +103,48 @@
     outline: none;
     background-color: transparent;
     font-size: 1rem;
-    margin-left: 10px;
 }
 
 .roleplayList-recommend-container{
-    height: 270px;
-    width: 70%;
+    height: 370px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: start;
+    justify-content: center;
 }
 
 .roleplayList-recommend-header{
     font-size: 1.1rem;
     color: #080808;
-    margin-left: 25px;
+    margin-left: 30px;
 }
 
 .roleplayList-recommend-list-container{
-    width: 70%;
+    width: 87%;
     height: 100%;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-self: center;
 }
 
 .roleplayList-category-container{
     display: flex;
     flex-direction: column;
-    height: 270px;
-    width: 70%;
+    height: 170px;
+    width: 87%;
+    min-width: 87%;
+    margin-top: 40px;
+    align-items: start;
+    justify-self: center;
 }
 
 .roleplayList-category-button-container{
     display: flex;
     gap: 10px;
     margin-bottom: 5px;
-    margin-left: 30px;
+    margin-left: 20px;
 }
 
 .roleplayList-category-button{
@@ -122,7 +161,8 @@
 }
 
 .roleplayList-category-button:hover{
-    color: #000000;
+    color: #e4e1e1;
+    background-color: #000000;
     font-weight: bold;
 }
 
@@ -135,4 +175,26 @@
 .roleplayList-category-list-container{
     width: 100%;
     height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    justify-self: center;
 }
+
+.rolepalyList-voice-container{
+    margin-top: 20px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: center;
+}
+
+.rolepalyList-voice-header{
+
+    margin-left: 35px;
+    font-size: 1.1rem;
+    color: #080808;
+}
+

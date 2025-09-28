@@ -1,0 +1,66 @@
+.roleplay-skill-pull-up {
+  position: relative;
+  display: inline-block;
+  width: 150px;
+}
+
+.roleplay-skill {
+  margin-left: 12px;
+  padding: 8px 16px;
+  background-color: #7e8396;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roleplay-skill:hover {
+  background-color: #7e8396;
+}
+
+.pull-up-options {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  padding: 8px 0;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+  transform-origin: bottom center;
+  transform: scaleY(0);
+  opacity: 0;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  z-index: 100;
+}
+
+.pull-up-options.show {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.pull-up-option {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pull-up-option:hover {
+  background-color: #f5f5f7;
+}
+
+/* 小三角形指示器 */
+.pull-up-options::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+}

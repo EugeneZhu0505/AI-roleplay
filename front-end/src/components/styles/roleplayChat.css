@@ -1,5 +1,6 @@
 .roleplay-page-container{
-  background-color: #f9f9f9;
+  /* background-color: #f9f9f9; */
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   display: flex;
   width: 100%;
   height: 100%;
@@ -11,9 +12,9 @@
   display: flex;
   flex-direction: column;
   margin-top: 10px;
-  background-color: #f9f9f9;
+  /* background-color: #f9f9f9; */
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   width: 60%;
-  height: 100%;
   height: 100%;
   max-height: 90%;
   margin-left :150px;
@@ -37,9 +38,11 @@
 
 .roleplay-chat-messages{
     height: 650px;
-    overflow-y: auto;
+    /* overflow-y: auto; */
+    overflow-y: scroll;
     padding: 50px;
-    background-color: #f9f9f9;
+    /* background-color: #f9f9f9; */
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -53,6 +56,7 @@
 
 .roleplay-chat-messages::-webkit-scrollbar-track {
   background: #f1f1f1;
+
 }
 
 .roleplay-chat-messages::-webkit-scrollbar-thumb {
@@ -97,7 +101,7 @@
 }
 
 .message-content {
-  background-color: #babdc3;
+  background-color: #a2a3a7;
   margin-bottom: 16px;
   max-width: 100%;
   padding: 10px 14px;
@@ -132,7 +136,7 @@
 .send-button {
   margin-left: 12px;
   padding: 12px 24px;
-  background-color: #0a0b0b;
+  background-color: #756f6f;
   color: white;
   border: none;
   border-radius: 24px;
@@ -142,7 +146,7 @@
 }
 
 .send-button:hover {
-  background-color: #454646;
+  background-color: #548e8e;
 }
 
 .send-button:disabled {
@@ -151,14 +155,15 @@
 }
 
 .roleplay-setting-container{
-  background-color: #f9f9f9;
+  /* background-color: #f9f9f9; */
+  background-color: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   width: 300px;
-  min-height: 890px;
   padding: 20px;
   overflow: hidden;
   align-self: flex-end;
   align-items: center;
   text-align: center;
+  height: 100%;
 }
 
 .roleplay-setting-header{
@@ -167,6 +172,8 @@
   height: 100px;
   justify-items: center;
   user-select: none;
+  align-items: center;
+  max-height: 90%;
 }
 
 .roleplay-image-container{
@@ -230,7 +237,7 @@
 
 .roleplay-setting-ur-item:hover {
   width: 100%;
-  background-color: #f0f0f0;
+  background-color: #cfcccc;
   border-color: #999;
 }
 
@@ -239,6 +246,7 @@
   height: 20px;
   margin-right: 15px;
 }
+
 
 
 

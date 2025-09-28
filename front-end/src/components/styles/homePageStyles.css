@@ -19,6 +19,7 @@
 .sidebar {
   width: 300px;
   background-color: #dcdee08a;
+  /* background-color: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); */
   padding: 20px 0;
   position: fixed;
   height: 100vh;
@@ -27,6 +28,7 @@
   z-index: 1000;
   transform: translateX(-100%);
   width: 200px;
+
 }
 
 /* 侧边栏头部样式 */
@@ -168,8 +170,8 @@
   flex: 1;
   margin-left: 150px;
   padding: 20px;
-  background-color: #f5f7fa;
-  max-height: 100vh;
+  /* background-color: #f5f7fa; */
+  background-color: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   transition: transform 0.3s ease;
 }
 
