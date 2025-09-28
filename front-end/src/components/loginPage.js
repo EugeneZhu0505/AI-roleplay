@@ -3,13 +3,15 @@ import {useState } from 'react';
 import './styles/loginContent.css';
 import Login from './login';
 
-const LoginPage = () => {
+
+const LoginPage = ({ onLoginSuccess }) => {
   const [visible, setVisible] = useState(false);
 
   const navigate = useNavigate();
   
   const handleRegisterClick = () => {
-    setVisible(true);
+    navigate('/register');
+    
   };
 
   const handleLoginClick = () => {
@@ -39,7 +41,7 @@ const LoginPage = () => {
           <button className="btn btn-secondary" onClick={handleLoginClick}>
             登录
           </button>
-          <Login visible={visible} onClose={handleCloseLogin} successLogin={successLogin} />
+          <Login visible={visible} onClose={handleCloseLogin} successLogin={successLogin} onLoginSuccess={onLoginSuccess} />
         </div>
       </header>
 

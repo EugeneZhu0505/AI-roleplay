@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import './styles/login.css';
 import { LoginPost } from './utils/api';
 
-const Login = ({ visible, onClose, successLogin }) => {
+const Login = ({ visible, onClose, successLogin, onLoginSuccess }) => {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -23,6 +23,7 @@ const Login = ({ visible, onClose, successLogin }) => {
                         "accessToken": result.data.accessToken,
                     }));
                 successLogin(true);
+                onLoginSuccess(true);
                 onClose();
             }
         } catch (error) {

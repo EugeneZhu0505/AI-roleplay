@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RegisterPost } from './utils/api';
+import { uploadImagePost } from './utils/api';
 
 const RegisterPage = () => {
   // 表单状态管理
@@ -16,7 +17,6 @@ const RegisterPage = () => {
   const [avatar, setAvatar] = useState(''); // 存储头像Base64
   const [avatarPreview, setAvatarPreview] = useState(''); // 头像预览图
   const fileInputRef = useRef(null); // 文件输入框引用
-  const [avatarUrl, setAvatarUrl] = useState(''); // 头像URL
   
   // 错误信息状态
   const [errors, setErrors] = useState({});
@@ -61,14 +61,12 @@ const RegisterPage = () => {
       
       // 读取图片并生成预览
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result); // 存储Base64用于提交
+      reader.onloadend = () => { 
         setAvatarPreview(reader.result); // 显示预览
+        setAvatar(reader.result); // 设置头像数据
       };
       reader.readAsDataURL(file);
 
-      const tempUrl = URL.createObjectURL(file);
-      setAvatarUrl(tempUrl);
     }
   };
 
@@ -126,14 +124,28 @@ const RegisterPage = () => {
     
     if (validateForm()) {
       setIsRegistering(true);
-      
-      const submitData = {
-        ...formData,
-        avatar: avatar // 头像Base64（实际项目中可转成文件流或URL）
-      };
+  
 
+      const imagePostUrl = `${process.env.REACT_APP_API_BASE_URL}/api/files/upload`;
+
+
+      const imageResponse = await uploadImagePost(imagePostUrl, avatar);
+      if (imageResponse.code !== 0) {
+        setRegisterSuccess(false);
+        setIsRegistering(false);
+        setErrors({
+          ...errors,
+          avatar: imageResponse.msg || '头像上传失败，请稍后重试'
+        });
+        return;
+      }
+      
       const registerUrl = `${process.env.REACT_APP_API_BASE_URL}/api/auth/register`;
-      const response = await RegisterPost(registerUrl, submitData);
+      const response = await RegisterPost(registerUrl, {
+        username: formData.username,
+        password: formData.password,
+        avatarUrl: imageResponse.data.fileUrl,
+      });
       if (response.code === 0) {
         setRegisterSuccess(true);
         setIsRegistering(false);
