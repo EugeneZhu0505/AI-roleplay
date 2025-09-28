@@ -1,0 +1,385 @@
+/*!
+	Copyright (c) 2018 Jed Watson.
+	Licensed under the MIT License (MIT), see
+	http://jedwatson.github.io/classnames
+*/
+
+/*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */
+
+/**
+ * @license React
+ * react-dom-client.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-dom.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-is.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-jsx-runtime.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * scheduler.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * CanvasRecorder is a standalone class used by {@link RecordRTC} to bring HTML5-Canvas recording into video WebM. It uses HTML2Canvas library and runs top over {@link Whammy}.
+ * @summary HTML2Canvas recording into video WebM.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef CanvasRecorder
+ * @class
+ * @example
+ * var recorder = new CanvasRecorder(htmlElement, { disableLogs: true, useWhammyRecorder: true });
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     video.src = URL.createObjectURL(blob);
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {HTMLElement} htmlElement - querySelector/getElementById/getElementsByTagName[0]/etc.
+ * @param {object} config - {disableLogs:true, initCallback: function}
+ */
+
+/**
+ * DiskStorage is a standalone object used by {@link RecordRTC} to store recorded blobs in IndexedDB storage.
+ * @summary Writing blobs into IndexedDB.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @example
+ * DiskStorage.Store({
+ *     audioBlob: yourAudioBlob,
+ *     videoBlob: yourVideoBlob,
+ *     gifBlob  : yourGifBlob
+ * });
+ * DiskStorage.Fetch(function(dataURL, type) {
+ *     if(type === 'audioBlob') { }
+ *     if(type === 'videoBlob') { }
+ *     if(type === 'gifBlob')   { }
+ * });
+ * // DiskStorage.dataStoreName = 'recordRTC';
+ * // DiskStorage.onError = function(error) { };
+ * @property {function} init - This method must be called once to initialize IndexedDB ObjectStore. Though, it is auto-used internally.
+ * @property {function} Fetch - This method fetches stored blobs from IndexedDB.
+ * @property {function} Store - This method stores blobs in IndexedDB.
+ * @property {function} onError - This function is invoked for any known/unknown error.
+ * @property {string} dataStoreName - Name of the ObjectStore created in IndexedDB storage.
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ */
+
+/**
+ * GifRecorder is standalone calss used by {@link RecordRTC} to record video or canvas into animated gif.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef GifRecorder
+ * @class
+ * @example
+ * var recorder = new GifRecorder(mediaStream || canvas || context, { onGifPreview: function, onGifRecordingStarted: function, width: 1280, height: 720, frameRate: 200, quality: 10 });
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     img.src = URL.createObjectURL(blob);
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object or HTMLCanvasElement or CanvasRenderingContext2D.
+ * @param {object} config - {disableLogs:true, initCallback: function, width: 320, height: 240, frameRate: 200, quality: 10}
+ */
+
+/**
+ * MRecordRTC runs on top of {@link RecordRTC} to bring multiple recordings in a single place, by providing simple API.
+ * @summary MRecordRTC stands for "Multiple-RecordRTC".
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef MRecordRTC
+ * @class
+ * @example
+ * var recorder = new MRecordRTC();
+ * recorder.addStream(MediaStream);
+ * recorder.mediaType = {
+ *     audio: true, // or StereoAudioRecorder or MediaStreamRecorder
+ *     video: true, // or WhammyRecorder or MediaStreamRecorder or WebAssemblyRecorder or CanvasRecorder
+ *     gif: true    // or GifRecorder
+ * };
+ * // mimeType is optional and should be set only in advance cases.
+ * recorder.mimeType = {
+ *     audio: 'audio/wav',
+ *     video: 'video/webm',
+ *     gif:   'image/gif'
+ * };
+ * recorder.startRecording();
+ * @see For further information:
+ * @see {@link https://github.com/muaz-khan/RecordRTC/tree/master/MRecordRTC|MRecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @requires {@link RecordRTC}
+ */
+
+/**
+ * MediaStreamRecorder is an abstraction layer for {@link https://w3c.github.io/mediacapture-record/MediaRecorder.html|MediaRecorder API}. It is used by {@link RecordRTC} to record MediaStream(s) in both Chrome and Firefox.
+ * @summary Runs top over {@link https://w3c.github.io/mediacapture-record/MediaRecorder.html|MediaRecorder API}.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://github.com/muaz-khan|Muaz Khan}
+ * @typedef MediaStreamRecorder
+ * @class
+ * @example
+ * var config = {
+ *     mimeType: 'video/webm', // vp8, vp9, h264, mkv, opus/vorbis
+ *     audioBitsPerSecond : 256 * 8 * 1024,
+ *     videoBitsPerSecond : 256 * 8 * 1024,
+ *     bitsPerSecond: 256 * 8 * 1024,  // if this is provided, skip above two
+ *     checkForInactiveTracks: true,
+ *     timeSlice: 1000, // concatenate intervals based blobs
+ *     ondataavailable: function() {} // get intervals based blobs
+ * }
+ * var recorder = new MediaStreamRecorder(mediaStream, config);
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     video.src = URL.createObjectURL(blob);
+ *
+ *     // or
+ *     var blob = recorder.blob;
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @param {object} config - {disableLogs:true, initCallback: function, mimeType: "video/webm", timeSlice: 1000}
+ * @throws Will throw an error if first argument "MediaStream" is missing. Also throws error if "MediaRecorder API" are not supported by the browser.
+ */
+
+/**
+ * MultiStreamRecorder can record multiple videos in single container.
+ * @summary Multi-videos recorder.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef MultiStreamRecorder
+ * @class
+ * @example
+ * var options = {
+ *     mimeType: 'video/webm'
+ * }
+ * var recorder = new MultiStreamRecorder(ArrayOfMediaStreams, options);
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     video.src = URL.createObjectURL(blob);
+ *
+ *     // or
+ *     var blob = recorder.blob;
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStreams} mediaStreams - Array of MediaStreams.
+ * @param {object} config - {disableLogs:true, frameInterval: 1, mimeType: "video/webm"}
+ */
+
+/**
+ * RecordRTCPromisesHandler adds promises support in {@link RecordRTC}. Try a {@link https://github.com/muaz-khan/RecordRTC/blob/master/simple-demos/RecordRTCPromisesHandler.html|demo here}
+ * @summary Promises for {@link RecordRTC}
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef RecordRTCPromisesHandler
+ * @class
+ * @example
+ * var recorder = new RecordRTCPromisesHandler(mediaStream, options);
+ * recorder.startRecording()
+ *         .then(successCB)
+ *         .catch(errorCB);
+ * // Note: You can access all RecordRTC API using "recorder.recordRTC" e.g. 
+ * recorder.recordRTC.onStateChanged = function(state) {};
+ * recorder.recordRTC.setRecordingDuration(5000);
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - Single media-stream object, array of media-streams, html-canvas-element, etc.
+ * @param {object} config - {type:"video", recorderType: MediaStreamRecorder, disableLogs: true, numberOfAudioChannels: 1, bufferSize: 0, sampleRate: 0, video: HTMLVideoElement, etc.}
+ * @throws Will throw an error if "new" keyword is not used to initiate "RecordRTCPromisesHandler". Also throws error if first argument "MediaStream" is missing.
+ * @requires {@link RecordRTC}
+ */
+
+/**
+ * StereoAudioRecorder is a standalone class used by {@link RecordRTC} to bring "stereo" audio-recording in chrome.
+ * @summary JavaScript standalone object for stereo audio recording.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef StereoAudioRecorder
+ * @class
+ * @example
+ * var recorder = new StereoAudioRecorder(MediaStream, {
+ *     sampleRate: 44100,
+ *     bufferSize: 4096
+ * });
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     video.src = URL.createObjectURL(blob);
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @param {object} config - {sampleRate: 44100, bufferSize: 4096, numberOfAudioChannels: 1, etc.}
+ */
+
+/**
+ * Storage is a standalone object used by {@link RecordRTC} to store reusable objects e.g. "new AudioContext".
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @example
+ * Storage.AudioContext === webkitAudioContext
+ * @property {webkitAudioContext} AudioContext - Keeps a reference to AudioContext object.
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ */
+
+/**
+ * WebAssemblyRecorder lets you create webm videos in JavaScript via WebAssembly. The library consumes raw RGBA32 buffers (4 bytes per pixel) and turns them into a webm video with the given framerate and quality. This makes it compatible out-of-the-box with ImageData from a CANVAS. With realtime mode you can also use webm-wasm for streaming webm videos.
+ * @summary Video recording feature in Chrome, Firefox and maybe Edge.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef WebAssemblyRecorder
+ * @class
+ * @example
+ * var recorder = new WebAssemblyRecorder(mediaStream);
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     video.src = URL.createObjectURL(blob);
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @param {object} config - {webAssemblyPath:'webm-wasm.wasm',workerPath: 'webm-worker.js', frameRate: 30, width: 1920, height: 1080, bitrate: 1024, realtime: true}
+ */
+
+/**
+ * Whammy is a standalone class used by {@link RecordRTC} to bring video recording in Chrome. It is written by {@link https://github.com/antimatter15|antimatter15}
+ * @summary A real time javascript webm encoder based on a canvas hack.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef Whammy
+ * @class
+ * @example
+ * var recorder = new Whammy().Video(15);
+ * recorder.add(context || canvas || dataURL);
+ * var output = recorder.compile();
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ */
+
+/**
+ * WhammyRecorder is a standalone class used by {@link RecordRTC} to bring video recording in Chrome. It runs top over {@link Whammy}.
+ * @summary Video recording feature in Chrome.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef WhammyRecorder
+ * @class
+ * @example
+ * var recorder = new WhammyRecorder(mediaStream);
+ * recorder.record();
+ * recorder.stop(function(blob) {
+ *     video.src = URL.createObjectURL(blob);
+ * });
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @param {object} config - {disableLogs: true, initCallback: function, video: HTMLVideoElement, etc.}
+ */
+
+/**
+ * react-router v7.9.1
+ *
+ * Copyright (c) Remix Software Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ *
+ * @license MIT
+ */
+
+/**
+ * {@link GetRecorderType} is an inner/private helper for {@link RecordRTC}.
+ * @summary It returns best recorder-type available for your browser.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef GetRecorderType
+ * @class
+ * @example
+ * var RecorderType = GetRecorderType(options);
+ * var recorder = new RecorderType(options);
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @param {object} config - {type:"video", disableLogs: true, numberOfAudioChannels: 1, bufferSize: 0, sampleRate: 0, video: HTMLVideoElement, etc.}
+ */
+
+/**
+ * {@link RecordRTCConfiguration} is an inner/private helper for {@link RecordRTC}.
+ * @summary It configures the 2nd parameter passed over {@link RecordRTC} and returns a valid "config" object.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef RecordRTCConfiguration
+ * @class
+ * @example
+ * var options = RecordRTCConfiguration(mediaStream, options);
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - MediaStream object fetched using getUserMedia API or generated using captureStreamUntilEnded or WebAudio API.
+ * @param {object} config - {type:"video", disableLogs: true, numberOfAudioChannels: 1, bufferSize: 0, sampleRate: 0, video: HTMLVideoElement, getNativeBlob:true, etc.}
+ */
+
+/**
+ * {@link https://github.com/muaz-khan/RecordRTC|RecordRTC} is a WebRTC JavaScript library for audio/video as well as screen activity recording. It supports Chrome, Firefox, Opera, Android, and Microsoft Edge. Platforms: Linux, Mac and Windows. 
+ * @summary Record audio, video or screen inside the browser.
+ * @license {@link https://github.com/muaz-khan/RecordRTC/blob/master/LICENSE|MIT}
+ * @author {@link https://MuazKhan.com|Muaz Khan}
+ * @typedef RecordRTC
+ * @class
+ * @example
+ * var recorder = RecordRTC(mediaStream or [arrayOfMediaStream], {
+ *     type: 'video', // audio or video or gif or canvas
+ *     recorderType: MediaStreamRecorder || CanvasRecorder || StereoAudioRecorder || Etc
+ * });
+ * recorder.startRecording();
+ * @see For further information:
+ * @see {@link https://github.com/muaz-khan/RecordRTC|RecordRTC Source Code}
+ * @param {MediaStream} mediaStream - Single media-stream object, array of media-streams, html-canvas-element, etc.
+ * @param {object} config - {type:"video", recorderType: MediaStreamRecorder, disableLogs: true, numberOfAudioChannels: 1, bufferSize: 0, sampleRate: 0, desiredSampRate: 16000, video: HTMLVideoElement, etc.}
+ */
+
+/**![check-circle](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUxMiA2NEMyNjQuNiA2NCA2NCAyNjQuNiA2NCA1MTJzMjAwLjYgNDQ4IDQ0OCA0NDggNDQ4LTIwMC42IDQ0OC00NDhTNzU5LjQgNjQgNTEyIDY0em0xOTMuNSAzMDEuN2wtMjEwLjYgMjkyYTMxLjggMzEuOCAwIDAxLTUxLjcgMEwzMTguNSA0ODQuOWMtMy44LTUuMyAwLTEyLjcgNi41LTEyLjdoNDYuOWMxMC4yIDAgMTkuOSA0LjkgMjUuOSAxMy4zbDcxLjIgOTguOCAxNTcuMi0yMThjNi04LjMgMTUuNi0xMy4zIDI1LjktMTMuM0g2OTljNi41IDAgMTAuMyA3LjQgNi41IDEyLjd6IiAvPjwvc3ZnPg==) */
+
+/**![close-circle](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIGZpbGwtcnVsZT0iZXZlbm9kZCIgdmlld0JveD0iNjQgNjQgODk2IDg5NiIgZm9jdXNhYmxlPSJmYWxzZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNTEyIDY0YzI0Ny40IDAgNDQ4IDIwMC42IDQ0OCA0NDhTNzU5LjQgOTYwIDUxMiA5NjAgNjQgNzU5LjQgNjQgNTEyIDI2NC42IDY0IDUxMiA2NHptMTI3Ljk4IDI3NC44MmgtLjA0bC0uMDguMDZMNTEyIDQ2Ni43NSAzODQuMTQgMzM4Ljg4Yy0uMDQtLjA1LS4wNi0uMDYtLjA4LS4wNmEuMTIuMTIgMCAwMC0uMDcgMGMtLjAzIDAtLjA1LjAxLS4wOS4wNWwtNDUuMDIgNDUuMDJhLjIuMiAwIDAwLS4wNS4wOS4xMi4xMiAwIDAwMCAuMDd2LjAyYS4yNy4yNyAwIDAwLjA2LjA2TDQ2Ni43NSA1MTIgMzM4Ljg4IDYzOS44NmMtLjA1LjA0LS4wNi4wNi0uMDYuMDhhLjEyLjEyIDAgMDAwIC4wN2MwIC4wMy4wMS4wNS4wNS4wOWw0NS4wMiA0NS4wMmEuMi4yIDAgMDAuMDkuMDUuMTIuMTIgMCAwMC4wNyAwYy4wMiAwIC4wNC0uMDEuMDgtLjA1TDUxMiA1NTcuMjVsMTI3Ljg2IDEyNy44N2MuMDQuMDQuMDYuMDUuMDguMDVhLjEyLjEyIDAgMDAuMDcgMGMuMDMgMCAuMDUtLjAxLjA5LS4wNWw0NS4wMi00NS4wMmEuMi4yIDAgMDAuMDUtLjA5LjEyLjEyIDAgMDAwLS4wN3YtLjAyYS4yNy4yNyAwIDAwLS4wNS0uMDZMNTU3LjI1IDUxMmwxMjcuODctMTI3Ljg2Yy4wNC0uMDQuMDUtLjA2LjA1LS4wOGEuMTIuMTIgMCAwMDAtLjA3YzAtLjAzLS4wMS0uMDUtLjA1LS4wOWwtNDUuMDItNDUuMDJhLjIuMiAwIDAwLS4wOS0uMDUuMTIuMTIgMCAwMC0uMDcgMHoiIC8+PC9zdmc+) */
+
+/**![close](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIGZpbGwtcnVsZT0iZXZlbm9kZCIgdmlld0JveD0iNjQgNjQgODk2IDg5NiIgZm9jdXNhYmxlPSJmYWxzZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNzk5Ljg2IDE2Ni4zMWMuMDIgMCAuMDQuMDIuMDguMDZsNTcuNjkgNTcuN2MuMDQuMDMuMDUuMDUuMDYuMDhhLjEyLjEyIDAgMDEwIC4wNmMwIC4wMy0uMDIuMDUtLjA2LjA5TDU2OS45MyA1MTJsMjg3LjcgMjg3LjdjLjA0LjA0LjA1LjA2LjA2LjA5YS4xMi4xMiAwIDAxMCAuMDdjMCAuMDItLjAyLjA0LS4wNi4wOGwtNTcuNyA1Ny42OWMtLjAzLjA0LS4wNS4wNS0uMDcuMDZhLjEyLjEyIDAgMDEtLjA3IDBjLS4wMyAwLS4wNS0uMDItLjA5LS4wNkw1MTIgNTY5LjkzbC0yODcuNyAyODcuN2MtLjA0LjA0LS4wNi4wNS0uMDkuMDZhLjEyLjEyIDAgMDEtLjA3IDBjLS4wMiAwLS4wNC0uMDItLjA4LS4wNmwtNTcuNjktNTcuN2MtLjA0LS4wMy0uMDUtLjA1LS4wNi0uMDdhLjEyLjEyIDAgMDEwLS4wN2MwLS4wMy4wMi0uMDUuMDYtLjA5TDQ1NC4wNyA1MTJsLTI4Ny43LTI4Ny43Yy0uMDQtLjA0LS4wNS0uMDYtLjA2LS4wOWEuMTIuMTIgMCAwMTAtLjA3YzAtLjAyLjAyLS4wNC4wNi0uMDhsNTcuNy01Ny42OWMuMDMtLjA0LjA1LS4wNS4wNy0uMDZhLjEyLjEyIDAgMDEuMDcgMGMuMDMgMCAuMDUuMDIuMDkuMDZMNTEyIDQ1NC4wN2wyODcuNy0yODcuN2MuMDQtLjA0LjA2LS4wNS4wOS0uMDZhLjEyLjEyIDAgMDEuMDcgMHoiIC8+PC9zdmc+) */
+
+/**![exclamation-circle](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUxMiA2NEMyNjQuNiA2NCA2NCAyNjQuNiA2NCA1MTJzMjAwLjYgNDQ4IDQ0OCA0NDggNDQ4LTIwMC42IDQ0OC00NDhTNzU5LjQgNjQgNTEyIDY0em0tMzIgMjMyYzAtNC40IDMuNi04IDgtOGg0OGM0LjQgMCA4IDMuNiA4IDh2MjcyYzAgNC40LTMuNiA4LTggOGgtNDhjLTQuNCAwLTgtMy42LTgtOFYyOTZ6bTMyIDQ0MGE0OC4wMSA0OC4wMSAwIDAxMC05NiA0OC4wMSA0OC4wMSAwIDAxMCA5NnoiIC8+PC9zdmc+) */
+
+/**![info-circle](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUxMiA2NEMyNjQuNiA2NCA2NCAyNjQuNiA2NCA1MTJzMjAwLjYgNDQ4IDQ0OCA0NDggNDQ4LTIwMC42IDQ0OC00NDhTNzU5LjQgNjQgNTEyIDY0em0zMiA2NjRjMCA0LjQtMy42IDgtOCA4aC00OGMtNC40IDAtOC0zLjYtOC04VjQ1NmMwLTQuNCAzLjYtOCA4LThoNDhjNC40IDAgOCAzLjYgOCA4djI3MnptLTMyLTM0NGE0OC4wMSA0OC4wMSAwIDAxMC05NiA0OC4wMSA0OC4wMSAwIDAxMCA5NnoiIC8+PC9zdmc+) */
+
+/**![loading](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTk4OCA1NDhjLTE5LjkgMC0zNi0xNi4xLTM2LTM2IDAtNTkuNC0xMS42LTExNy0zNC42LTE3MS4zYTQ0MC40NSA0NDAuNDUgMCAwMC05NC4zLTEzOS45IDQzNy43MSA0MzcuNzEgMCAwMC0xMzkuOS05NC4zQzYyOSA4My42IDU3MS40IDcyIDUxMiA3MmMtMTkuOSAwLTM2LTE2LjEtMzYtMzZzMTYuMS0zNiAzNi0zNmM2OS4xIDAgMTM2LjIgMTMuNSAxOTkuMyA0MC4zQzc3Mi4zIDY2IDgyNyAxMDMgODc0IDE1MGM0NyA0NyA4My45IDEwMS44IDEwOS43IDE2Mi43IDI2LjcgNjMuMSA0MC4yIDEzMC4yIDQwLjIgMTk5LjMuMSAxOS45LTE2IDM2LTM1LjkgMzZ6IiAvPjwvc3ZnPg==) */
