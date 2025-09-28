@@ -47,10 +47,9 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
 
     // --- III. 服务器通信和播放 ---
     const sendAudioToServer = useCallback(async (audioBlob) => {
-        // 1. 核心优化：暂停录制器，但保持 MediaStream 活跃
+        // 1. 发送前确保录音器已完全停止
         if (recorderRef.current) {
-            recorderRef.current.startRecording();
-            recorderRef.current.pauseRecording(); 
+            recorderRef.current.pauseRecording();
         }
         
         // 2. 封装 Blob 为 FormData
@@ -98,6 +97,19 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
         recorderRef.current.stopRecording(() => {
             setHasSpoken(false);
             const wavBlob = recorderRef.current.getBlob();
+            
+            // 3. 关键修复：重置录音器，准备下一次录音
+            recorderRef.current = new RecordRTC(streamRef.current, {
+                type: 'audio',
+                mimeType: 'audio/wav',
+                recorderType: RecordRTC.StereoAudioRecorder,
+                numberOfAudioChannels: 1 
+            });
+            
+            // 4. 立即启动新的录音器，但保持暂停状态，等待用户说话
+            recorderRef.current.startRecording();
+            recorderRef.current.pauseRecording();
+            
             sendAudioToServer(wavBlob);
         });
     }, [sendAudioToServer]); 
@@ -199,7 +211,14 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
             // C. 空闲状态：检测用户是否开始说话
             if (currentDb >= SILENCE_THRESHOLD + 10) {
                 // 核心优化：直接开始录音，无需等待静音
-                if (recorderRef.current) recorderRef.current.resumeRecording();
+                if (recorderRef.current) {
+                    // 根据录音器当前状态决定调用哪个方法
+                    if (recorderRef.current.getState() === 'inactive') {
+                        recorderRef.current.startRecording();
+                    } else if (recorderRef.current.getState() === 'paused') {
+                        recorderRef.current.resumeRecording();
+                    }
+                }
                 setCallStatus(CALL_STATUS.RECORDING);
                 setHasSpoken(true);
             }
@@ -209,17 +228,22 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
     }, [stopRecordingAndProcess]);
 
 
-    // // --- IV. 播放结束回调 ---
-    // const handleAudioEnded = () => {
-    //     // 播放完毕且用户未抢占
+    // --- IV. 播放结束回调 ---
+    const handleAudioEnded = () => {
+        // 播放完毕且用户未抢占
         
-    //     // 核心优化：恢复录制，继续捕捉用户语音
-    //     if (recorderRef.current) {
-    //         recorderRef.current.resumeRecording();
-    //     }
+        // 核心优化：恢复录制，继续捕捉用户语音
+        if (recorderRef.current) {
+            // 确保录音器处于正确状态
+            if (recorderRef.current.getState() === 'inactive') {
+                recorderRef.current.startRecording();
+            } else if (recorderRef.current.getState() === 'paused') {
+                recorderRef.current.resumeRecording();
+            }
+        }
         
-    //     setCallStatus(CALL_STATUS.RECORDING);
-    // };
+        setCallStatus(CALL_STATUS.RECORDING);
+    };
 
     // --- 生命周期和清理 ---
     const closeSpeech = () => {
@@ -289,10 +313,10 @@ const RoleplaySpeech = ({ handleSpeechClick, callingCoversationDetails, roleplay
                     
                 </div>
 
-                {/* 隐藏的 <audio> 标签用于控制播放 */}
+                {/* 隐藏的 </think> 标签用于控制播放 */}
                 <audio 
                     ref={audioRef} 
-                    // onEnded={handleAudioEnded} 
+                    onEnded={handleAudioEnded} 
                     style={{ display: 'none' }}
                 />
 

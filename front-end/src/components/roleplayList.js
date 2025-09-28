@@ -87,7 +87,7 @@ const RoleplayList = React.memo((props) => {
                         欢迎回来,
                     </div>
                     <div className="roleplayList-header-user">
-                        <img className="roleplayList-header-user-img" src={image==="" ? image : require("../imgs/place_charac_image.png")}/>
+                        <img className="roleplayList-header-user-img" src={image!=="" ? image : require("../imgs/place_charac_image.png")}/>
                         <div className="roleplayList-header-user-name">
                             {username}
                         </div>

@@ -332,9 +332,10 @@ const RoleplayChat = ({ roleplayDetailedInformation, handleSpeechClick}) => {
                     type="text"
                     value={input}
                     onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="向 AI角色 发送消息..."
                     />
-                    <button className="send-button" onClick={handleSendClick} onKeyDown={handleKeyDown}>
+                    <button className="send-button" onClick={handleSendClick}>
                     发送
                     </button>
                     <div class="roleplay-skill-pull-up">           

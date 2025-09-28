@@ -47,7 +47,6 @@ export const LoginPost = async (url, body) => {
   }
 }
 
-
 // 无body的getAPI
 export const getApiNotBody = async(url) => {
     try{
@@ -67,12 +66,6 @@ export const getApiNotBody = async(url) => {
     throw error;
   }
 }
-
-
-
-
-
-
 
 // 创建新对话
 export const createConversationPost = async (url) => {
@@ -179,5 +172,38 @@ export const deleteConversationPost = async (url) => {
   }
 }
 
+// 上传图像
+export const uploadImagePost = async (url, body) => {
+  const formData = new FormData();
+  const blob = dataURItoBlob(body);
+  formData.append('file', blob, "image.jpg");
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*',
+        'accessToken' : JSON.parse(localStorage.getItem("login-success-user")).accessToken,
+      },
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP错误: 状态码 ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    throw error;
+  }
+}
+
+const dataURItoBlob = (dataURI) => {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+}
 
 

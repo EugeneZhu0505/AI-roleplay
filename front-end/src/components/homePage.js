@@ -7,8 +7,6 @@ import RoleplayHistoryList from './roleplayHistoryList';
 import RoleplaySpeech from './roleyplaySpeech';
 import { HistoryAICharacter, SelectedAICharacter } from './utils/historyAICharacter';
 
-
-
 const callingCoversationDetail = {
     conversationId: -1,
     userId: -1,
@@ -51,8 +49,9 @@ function HomePage() {
         let updatedCharacters;
         updatedCharacters = [...chatHistoryCharacters];
         updatedCharacters.unshift(character);
-        console.log(updatedCharacters);
         setChatHistoryCharacters(updatedCharacters);
+
+        setSelectedRoleplay(character);
     }
 
     const handleSearchChange = (e) => {
