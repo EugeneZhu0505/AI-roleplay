@@ -121,5 +121,15 @@ public class ConversationService extends ServiceImpl<ConversationMapper, Convers
         conversation.setTitle(title);
         return this.updateById(conversation);
     }
+
+    /**
+     * 删除对话
+     * @param conversationId 对话ID
+     * @return 是否删除成功
+     */
+    public boolean deleteConversation(Long conversationId) {
+        log.info("删除对话, conversationId: {}", conversationId);
+        return this.removeById(conversationId);
+    }
 }
 

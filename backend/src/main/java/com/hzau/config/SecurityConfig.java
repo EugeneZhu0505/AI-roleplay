@@ -45,14 +45,16 @@ public class SecurityConfig {
     private String localhost;
 
     @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
-    
-    @Autowired
     private com.hzau.interceptor.RateLimitInterceptor rateLimitInterceptor;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
     }
 
     @Bean
@@ -74,8 +76,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler())
                 )
-                .addFilterBefore(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
-                .addFilterAfter(rateLimitInterceptor, SecurityWebFiltersOrder.AUTHENTICATION)
+                .addFilterBefore(jwtAuthenticationFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
+                //.addFilterAfter(rateLimitInterceptor, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 

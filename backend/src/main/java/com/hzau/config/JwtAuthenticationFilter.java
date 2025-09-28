@@ -25,7 +25,7 @@ import java.util.Arrays;
  * @date: 2025/9/23 上午10:05
  */
 @Slf4j
-@Component
+// 移除 @Component 注解，避免被Spring自动注册为WebFilter
 public class JwtAuthenticationFilter implements WebFilter {
 
     @Autowired

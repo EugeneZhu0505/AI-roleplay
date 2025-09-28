@@ -62,6 +62,8 @@ public class RateLimitService {
             if (currentTime - rateLimitInfo.getWindowStartTime() >= MINUTE_IN_MILLIS) {
                 rateLimitInfo.resetWindow();
                 log.debug("重置限流窗口, key: {}", key);
+                // 重置后允许请求，并更新时间
+                rateLimitInfo.incrementCount();
                 return true;
             }
 
@@ -72,7 +74,7 @@ public class RateLimitService {
                 return false;
             }
 
-            // 检查小时级限流（简化实现，基于请求间隔）
+            // 检查秒级限流（基于请求间隔）- 在更新时间戳之前检查
             long timeSinceLastRequest = currentTime - rateLimitInfo.getLastRequestTime();
             if (timeSinceLastRequest < 2000) { // 2秒内不能连续请求
                 log.warn("用户请求间隔过短，触发秒级限流, key: {}, interval: {}ms",
@@ -80,9 +82,10 @@ public class RateLimitService {
                 return false;
             }
 
-            // 允许请求，更新计数
+            // 允许请求，更新计数和时间
             rateLimitInfo.incrementCount();
-            log.debug("允许请求, key: {}, count: {}", key, rateLimitInfo.getRequestCount());
+            log.debug("允许请求, key: {}, count: {}, 上次请求间隔: {}ms", 
+                    key, rateLimitInfo.getRequestCount(), timeSinceLastRequest);
             return true;
         }
     }

@@ -10,7 +10,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import reactor.core.publisher.Flux;
@@ -65,57 +68,137 @@ public class AiRoleplayService {
     /**
      * 获取角色开场白
      * @param characterId 角色ID
-     * @return 开场白内容
+     * @return 开场白内容和语音URL
      */
-    public Mono<String> getCharacterOpening(Long characterId) {
+    public Mono<CharacterOpeningResponse> getCharacterOpening(Long characterId) {
         log.info("获取角色开场白, characterId: {}", characterId);
 
         // 先从缓存获取
-        String cacheKey = OPENING_CACHE_KEY + characterId;
-        String cachedOpening = (String) redisTemplate.opsForValue().get(cacheKey);
-        if (cachedOpening != null) {
+        String textCacheKey = OPENING_CACHE_KEY + characterId + ":text";
+        String audioCacheKey = OPENING_CACHE_KEY + characterId + ":audio";
+        
+        String cachedText = (String) redisTemplate.opsForValue().get(textCacheKey);
+        String cachedAudioUrl = (String) redisTemplate.opsForValue().get(audioCacheKey);
+        
+        if (cachedText != null && cachedAudioUrl != null) {
             log.info("从缓存获取角色开场白, characterId: {}", characterId);
-            return Mono.just(cachedOpening);
+            return Mono.just(new CharacterOpeningResponse(cachedText, cachedAudioUrl));
         }
 
         // 缓存未命中，生成开场白
-        Mono<String> openingMono = generateCharacterOpening(characterId)
-                .doOnSuccess(opening -> {
-                    // 缓存开场白
-                    redisTemplate.opsForValue().set(cacheKey, opening, OPENING_CACHE_EXPIRE, TimeUnit.SECONDS);
+        return generateCharacterOpeningWithAudio(characterId)
+                .doOnSuccess(response -> {
+                    // 缓存开场白文本和语音URL
+                    redisTemplate.opsForValue().set(textCacheKey, response.getText(), OPENING_CACHE_EXPIRE, TimeUnit.SECONDS);
+                    redisTemplate.opsForValue().set(audioCacheKey, response.getAudioUrl(), OPENING_CACHE_EXPIRE, TimeUnit.SECONDS);
                     log.info("角色开场白已缓存, characterId: {}", characterId);
                 });
-        return openingMono;
     }
 
     /**
-     * 生成角色开场白
-     * @param characterId 角色ID
-     * @return 开场白内容
+     * 获取所有角色开场白语音URL
+     * @return
      */
-    private Mono<String> generateCharacterOpening(Long characterId) {
-        log.info("生成角色开场白, characterId: {}", characterId);
-
-        AiCharacter character = characterService.getById(characterId);
-        if (character == null) {
-            return Mono.error(new RuntimeException("角色不存在"));
+    public Mono<Map<String, String[]>> getAllCharacterOpeningAudios() {
+        log.info("获取所有角色的开场白语音URL");
+        
+        try {
+            // 获取所有激活的角色
+            List<AiCharacter> activeCharacters = characterService.getAllActiveCharacters();
+            log.info("找到 {} 个激活的角色", activeCharacters.size());
+            
+            if (activeCharacters.isEmpty()) {
+                log.warn("没有找到激活的角色");
+                return Mono.just(new HashMap<>());
+            }
+            
+            Map<String, String[]> audioUrlMap = new HashMap<>();
+            
+            // 遍历所有角色，从Redis缓存中获取语音URL
+            for (AiCharacter character : activeCharacters) {
+                String audioCacheKey = OPENING_CACHE_KEY + character.getId() + ":audio";
+                String cachedAudioUrl = (String) redisTemplate.opsForValue().get(audioCacheKey);
+                
+                if (cachedAudioUrl != null) {
+                    String[] infos = new String[]{character.getName(), character.getAvatarUrl(), cachedAudioUrl};
+                    audioUrlMap.put(character.getId().toString(), infos);
+                    log.debug("从缓存获取角色 {} 的开场白语音URL: {}", character.getName(), cachedAudioUrl);
+                } else {
+                    log.warn("角色 {} (ID: {}) 的开场白语音URL未在缓存中找到", character.getName(), character.getId());
+                }
+            }
+            
+            log.info("成功获取 {} 个角色的开场白语音URL", audioUrlMap.size());
+            return Mono.just(audioUrlMap);
+            
+        } catch (Exception e) {
+            log.error("获取所有角色开场白语音URL失败", e);
+            return Mono.error(new RuntimeException("获取角色开场白语音失败"));
         }
-
-        // 构建开场白生成提示
-        String prompt = buildOpeningPrompt(character);
-
-        // 获取并发控制许可
-        Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "llm");
-        return permitMono.flatMap(permit -> qiniuAiService.singleChat(prompt)
-                .doOnSuccess(opening -> {
-                    log.info("角色开场白生成成功, characterId: {}", characterId);
-                    concurrentControlService.releasePermit("system", "llm");
-                })
-                .doOnError(error -> {
-                    log.error("角色开场白生成失败, characterId: {}", characterId, error);
-                    concurrentControlService.releasePermit("system", "llm");
-                }));
     }
+
+    /**
+     * 生成角色开场白（包含语音）
+     * @param characterId 角色ID
+     * @return 开场白内容和语音URL
+     */
+    private Mono<CharacterOpeningResponse> generateCharacterOpeningWithAudio(Long characterId) {
+        log.info("生成角色开场白（包含语音）, characterId: {}", characterId);
+
+        return concurrentControlService.acquirePermit("system", "llm")
+                .flatMap(permit -> {
+                    AiCharacter character = characterService.getCharacterById(characterId);
+                    if (character == null) {
+                        return Mono.error(new RuntimeException("角色不存在或已被禁用"));
+                    }
+                    
+                    String prompt = buildOpeningPrompt(character);
+                    return qiniuAiService.singleChat(prompt)
+                            .flatMap(openingText -> {
+                                // 生成语音
+                                return qiniuAudioService.textToSpeechWithCharacter(openingText, character)
+                                        .flatMap(audioData -> {
+                                            // 保存音频文件
+                                            try {
+                                                String audioUrl = fileStorageService.saveBase64AudioFile(audioData, "character_opening");
+                                                return Mono.just(new CharacterOpeningResponse(openingText, audioUrl));
+                                            } catch (IOException e) {
+                                                return Mono.error(new RuntimeException("保存音频文件失败", e));
+                                            }
+                                        });
+                            })
+                            .doFinally(signalType -> concurrentControlService.releasePermit("system", "llm"));
+                });
+    }
+
+    // /**
+    //  * 生成角色开场白
+    //  * @param characterId 角色ID
+    //  * @return 开场白内容
+    //  */
+    // private Mono<String> generateCharacterOpening(Long characterId) {
+    //     log.info("生成角色开场白, characterId: {}", characterId);
+
+    //     AiCharacter character = characterService.getById(characterId);
+    //     if (character == null) {
+    //         return Mono.error(new RuntimeException("角色不存在"));
+    //     }
+
+    //     // 构建开场白生成提示
+    //     String prompt = buildOpeningPrompt(character);
+
+    //     // 获取并发控制许可
+    //     Mono<Boolean> permitMono = concurrentControlService.acquirePermit("system", "llm");
+    //     return permitMono.flatMap(permit -> qiniuAiService.singleChat(prompt)
+    //             .doOnSuccess(opening -> {
+    //                 log.info("角色开场白生成成功, characterId: {}", characterId);
+    //                 concurrentControlService.releasePermit("system", "llm");
+    //             })
+    //             .doOnError(error -> {
+    //                 log.error("角色开场白生成失败, characterId: {}", characterId, error);
+    //                 concurrentControlService.releasePermit("system", "llm");
+    //             }));
+    // }
 
     /**
      * 构建开场白生成提示
@@ -156,10 +239,10 @@ public class AiRoleplayService {
 
         // 获取开场白
         Mono<ConversationWithOpening> resultMono = getCharacterOpening(characterId)
-                .map(opening -> {
+                .map(openingResponse -> {
                     // 保存开场白消息
-                    messageService.saveCharacterMessage(conversation.getId(), opening);
-                    return new ConversationWithOpening(conversation, opening);
+                    messageService.saveCharacterMessage(conversation.getId(), openingResponse.getText());
+                    return new ConversationWithOpening(conversation, openingResponse.getText());
                 })
                 .doOnSuccess(result -> log.info("新对话创建成功, conversationId: {}", conversation.getId()))
                 .doOnError(error -> log.error("新对话创建失败, userId: {}, characterId: {}", userId, characterId, error));
@@ -445,6 +528,27 @@ public class AiRoleplayService {
     }
 
     /**
+     * 角色开场白响应类
+     */
+    public static class CharacterOpeningResponse {
+        private final String text;
+        private final String audioUrl;
+
+        public CharacterOpeningResponse(String text, String audioUrl) {
+            this.text = text;
+            this.audioUrl = audioUrl;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public String getAudioUrl() {
+            return audioUrl;
+        }
+    }
+
+    /**
      * 语音聊天响应类
      */
     public static class VoiceChatResponse {
@@ -495,6 +599,47 @@ public class AiRoleplayService {
         // 缓存未命中，从数据库获取
         log.info("从数据库获取对话历史, conversationId: {}", conversationId);
         return messageService.getConversationMessages(conversationId);
+    }
+
+    /**
+     * 删除对话及其相关消息
+     * @param userId 用户ID
+     * @param conversationId 对话ID
+     * @return 是否删除成功
+     */
+    public boolean deleteConversation(Integer userId, Long conversationId) {
+        log.info("删除对话及其相关消息, userId: {}, conversationId: {}", userId, conversationId);
+
+        try {
+            // 验证对话是否属于用户
+            if (!conversationService.isConversationOwnedByUser(conversationId, userId)) {
+                log.warn("用户无权删除该对话, userId: {}, conversationId: {}", userId, conversationId);
+                throw new RuntimeException("无权删除该对话");
+            }
+
+            // 删除对话相关的消息（由于数据库外键约束设置了ON DELETE CASCADE，删除对话时会自动删除相关消息）
+            // 但为了确保数据一致性，我们先手动删除消息
+            boolean messagesDeleted = messageService.deleteConversationMessages(conversationId);
+            log.info("删除对话消息结果, conversationId: {}, 删除成功: {}", conversationId, messagesDeleted);
+
+            // 删除对话
+            boolean conversationDeleted = conversationService.deleteConversation(conversationId);
+            log.info("删除对话结果, conversationId: {}, 删除成功: {}", conversationId, conversationDeleted);
+
+            // 清理相关缓存
+            conversationCacheService.deactivateConversation(userId, conversationId);
+
+            // 清理上下文缓存
+            String contextCacheKey = CONTEXT_CACHE_KEY + conversationId;
+            redisTemplate.delete(contextCacheKey);
+
+            log.info("对话删除完成, conversationId: {}", conversationId);
+            return conversationDeleted;
+
+        } catch (Exception e) {
+            log.error("删除对话失败, userId: {}, conversationId: {}", userId, conversationId, e);
+            throw new RuntimeException("删除对话失败: " + e.getMessage());
+        }
     }
 
     /**

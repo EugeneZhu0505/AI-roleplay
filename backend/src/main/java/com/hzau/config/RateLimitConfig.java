@@ -36,9 +36,11 @@ public class RateLimitConfig {
         private long windowStartTime;
 
         public RateLimitInfo() {
-            this.lastRequestTime = System.currentTimeMillis();
-            this.requestCount = 1;
-            this.windowStartTime = System.currentTimeMillis();
+            long currentTime = System.currentTimeMillis();
+            // 将lastRequestTime初始化为足够早的时间，避免第一次请求被误判为间隔过短
+            this.lastRequestTime = currentTime - 10000; // 10秒前
+            this.requestCount = 0; // 初始计数为0，在incrementCount中会增加到1
+            this.windowStartTime = currentTime;
         }
 
         public long getLastRequestTime() {
@@ -71,9 +73,11 @@ public class RateLimitConfig {
         }
 
         public void resetWindow() {
-            this.requestCount = 1;
-            this.windowStartTime = System.currentTimeMillis();
-            this.lastRequestTime = System.currentTimeMillis();
+            long currentTime = System.currentTimeMillis();
+            this.requestCount = 0; // 重置为0，在incrementCount中会增加到1
+            this.windowStartTime = currentTime;
+            // 重置lastRequestTime为足够早的时间，避免重置后立即请求被误判为间隔过短
+            this.lastRequestTime = currentTime - 10000; // 10秒前
         }
     }
 }

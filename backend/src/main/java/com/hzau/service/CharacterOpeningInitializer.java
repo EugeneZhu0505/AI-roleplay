@@ -54,6 +54,7 @@ public class CharacterOpeningInitializer {
                         .flatMap(character -> {
                             log.info("预生成角色开场白: {} (ID: {})", character.getName(), character.getId());
                             Mono<String> openingMono = aiRoleplayService.getCharacterOpening(character.getId())
+                                    .map(openingResponse -> openingResponse.getText()) // 从CharacterOpeningResponse中提取文本
                                     .timeout(Duration.ofSeconds(30)) // 添加超时控制
                                     .doOnSuccess(opening -> log.info("角色 {} 开场白预生成成功", character.getName()))
                                     .doOnError(error -> log.error("角色 {} 开场白预生成失败: {}", character.getName(), error.getMessage()))

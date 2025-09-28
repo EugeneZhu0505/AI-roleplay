@@ -49,6 +49,24 @@ public class ConversationController {
     private final FileStorageService fileStorageService;
     private final QiniuUploadService qiniuUploadService;
 
+    /**
+     * 获取所有角色的开场白语音URL
+     * @return
+     */
+    @GetMapping("/characters/opening-audios")
+    @Operation(summary = "获取所有角色开场白语音", description = "获取所有角色的开场白语音URL")
+    public Mono<Result<Map<String, String[]>>> getAllCharacterOpeningAudios() {
+        try {
+            log.info("获取所有角色开场白语音URL");
+            return aiRoleplayService.getAllCharacterOpeningAudios()
+                    .map(Result::success)
+                    .onErrorReturn(Result.fail(ErrorCode.ERROR500.getCode(), "获取角色开场白语音失败"));
+        } catch (Exception e) {
+            log.error("获取所有角色开场白语音URL失败", e);
+            return Mono.just(Result.fail(ErrorCode.ERROR500.getCode(), "获取角色开场白语音失败"));
+        }
+    }
+
 
     /**
      * 获取角色开场白
@@ -57,7 +75,7 @@ public class ConversationController {
      */
     @GetMapping("/characters/{characterId}/opening")
     @Operation(summary = "获取角色开场白", description = "获取指定角色的开场白")
-    public Mono<Result<String>> getCharacterOpening(
+    public Mono<Result<AiRoleplayService.CharacterOpeningResponse>> getCharacterOpening(
             @Parameter(description = "角色ID", required = true)
             @PathVariable Long characterId) {
         try {
@@ -73,6 +91,10 @@ public class ConversationController {
 
     /**
      * 创建新对话
+     * @param userId
+     * @param characterId
+     * @param title
+     * @return
      */
     @PostMapping
     @Operation(summary = "创建新对话", description = "与指定角色创建新的对话")
@@ -314,7 +336,9 @@ public class ConversationController {
     }
 
     /**
-     * 获取用户对话列表
+     * 获取指定用户的所有对话记录
+     * @param userId
+     * @return
      */
     @GetMapping
     @Operation(summary = "获取对话列表", description = "获取指定用户的所有对话")
@@ -503,6 +527,37 @@ public class ConversationController {
         } catch (Exception e) {
             log.error("获取用户激活对话列表失败, userId: {}", userId, e);
             return Result.fail(ErrorCode.ERROR500.getCode(), "获取激活对话列表失败");
+        }
+    }
+
+    /**
+     * 删除对话窗口
+     * @param conversationId
+     * @param userId
+     * @return
+     */
+    @DeleteMapping("/{conversationId}")
+    @Operation(summary = "删除对话", description = "删除指定的对话及其相关消息")
+    public Result<String> deleteConversation(
+            @Parameter(description = "对话ID", required = true)
+            @PathVariable Long conversationId,
+            @Parameter(description = "用户ID", required = true)
+            @RequestParam Integer userId) {
+        try {
+            log.info("删除对话请求, userId: {}, conversationId: {}", userId, conversationId);
+            
+            boolean deleted = aiRoleplayService.deleteConversation(userId, conversationId);
+            
+            if (deleted) {
+                log.info("对话删除成功, userId: {}, conversationId: {}", userId, conversationId);
+                return Result.success("对话删除成功");
+            } else {
+                log.warn("对话删除失败, userId: {}, conversationId: {}", userId, conversationId);
+                return Result.fail(ErrorCode.ERROR400.getCode(), "对话删除失败");
+            }
+        } catch (Exception e) {
+            log.error("删除对话异常, userId: {}, conversationId: {}", userId, conversationId, e);
+            return Result.fail(ErrorCode.ERROR500.getCode(), "删除对话失败: " + e.getMessage());
         }
     }
 }
